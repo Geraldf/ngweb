@@ -1,0 +1,18 @@
+{
+  "name": "fuchsclan-web-template",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c yellow,cyan \"npm run dev -w @fuchsclan/api\" \"npm run dev -w @fuchsclan/web\"",
+    "build": "npm run build -w @fuchsclan/api && npm run build -w @fuchsclan/web",
+    "typecheck": "npm run typecheck -w @fuchsclan/api && npm run typecheck -w @fuchsclan/web",
+    "governance:install": "git config core.hooksPath .githooks",
+    "task:start": "sh scripts/task-start.sh",
+    "task:complete": "sh scripts/task-complete.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  },
+  "engines": { "node": ">=22" }
+}

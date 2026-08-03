@@ -1,0 +1,26 @@
+#!/bin/sh
+
+message_file=$1
+branch=$(git branch --show-current)
+subject=$(sed -n '1p' "$message_file")
+
+case "$branch" in
+  task/[A-Z][A-Z0-9]*-[0-9]*-*) ;;
+  *)
+    echo "Commit rejected: work must be committed from task/<TASK-ID>-<slug>." >&2
+    echo "Example: task/FUC-16-git-governance" >&2
+    exit 1
+    ;;
+esac
+
+task_id=$(printf '%s' "$branch" | sed -E 's#^task/([A-Z][A-Z0-9]*-[0-9]+)-.*#\1#')
+expected="${task_id}: "
+
+case "$subject" in
+  "$expected"*" completed") ;;
+  *)
+    echo "Commit rejected: message must be '<TASK-ID>: <task information> completed'." >&2
+    echo "Example: ${task_id}: GIT Governance completed" >&2
+    exit 1
+    ;;
+esac
