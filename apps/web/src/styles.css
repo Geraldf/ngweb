@@ -53,8 +53,10 @@ button { font: inherit; }
 .casa-copy .lead { margin-top: 0; color: #263127; font-family: "Italiana", serif; font-size: 25px; line-height: 1.45; }
 .casa-details { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid #c9c7bd; }
 .casa-feature { min-height: 255px; padding: 42px 8% 46px 0; border-bottom: 1px solid #c9c7bd; display: grid; grid-template-columns: 48px 1fr; gap: 20px; }
+.casa-feature-image { grid-column: 1 / -1; width: 100%; height: 290px; margin-bottom: 16px; display: block; object-fit: cover; }
 .casa-feature:nth-child(even) { padding-right: 0; padding-left: 8%; border-left: 1px solid #c9c7bd; }
 .casa-feature-main { grid-column: 1 / -1; grid-template-columns: 48px minmax(0, 900px); padding-right: 20%; background: #e8e4da; padding-left: 4%; }
+.casa-feature-main .casa-feature-image { height: min(52vw, 620px); }
 .casa-feature h3 { margin: 0 0 20px; font-family: "Italiana", serif; font-size: 34px; font-weight: 400; }
 .casa-feature p { margin: 0; color: #666a61; font-size: 13px; line-height: 1.85; }
 .casa-feature p + p { margin-top: 14px; }
@@ -160,6 +162,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .casa-details { display: block; }
   .casa-feature, .casa-feature:nth-child(even), .casa-feature-main { min-height: 0; padding: 34px 0; border-left: 0; grid-template-columns: 38px 1fr; }
   .casa-feature-main { padding: 34px 22px; }
+  .casa-feature-image, .casa-feature-main .casa-feature-image { height: 250px; margin-bottom: 8px; }
   .casa-feature h3 { font-size: 29px; }
   .gallery-section { padding: 95px 24px 100px; }
   .gallery-intro { margin-bottom: 55px; display: block; }

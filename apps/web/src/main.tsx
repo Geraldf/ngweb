@@ -1,7 +1,14 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
+import ausstattungImage from "./assets/Ausstattung.jpg";
+import badezimmerImage from "./assets/BadeZimmer.jpeg";
 import heroImage from "./assets/frontimage.jpg";
+import gartenImage from "./assets/Garten.jpg";
+import kinderzimmerImage from "./assets/Kinderzimmer.jpg";
+import schlafzimmerImage from "./assets/Schlafzimmer.jpg";
+import terrasseImage from "./assets/Terassse.jpg";
+import wohnenKuecheImage from "./assets/Wohnen_Kueche.jpg";
 import "./styles.css";
 
 const links = ["Home", "La Casa", "Galerie", "Lage & Infos", "Preise & Kalender"];
@@ -220,30 +227,37 @@ function App() {
 
           <div className="casa-details">
             <article className="casa-feature casa-feature-main">
+              <img className="casa-feature-image" src={ausstattungImage} alt="Helle, moderne Ausstattung der Casa" loading="lazy" />
               <p className="feature-number">01</p>
               <div><h3>Ausstattung</h3><p>Unsere neue Casa ist hell, modern und gemütlich eingerichtet. Wir haben großen Wert auf eine gute und komfortable Ausstattung gelegt, damit das Haus zu jeder Jahreszeit genutzt werden kann.</p><p>Das Haus umfasst einen offenen Wohn- und Essbereich mit gut ausgestatteter Küche, eine angrenzende große Terrasse mit Privatpool, zwei Schlafzimmer und ein Badezimmer. Kostenloses WLAN ist überall verfügbar. Moderne Klimageräte befinden sich in den Schlafräumen und im Wohn- und Essbereich. Alle Fenster sind mit hochwertigen, beweglichen Jalousien und Fliegengittern versehen.</p></div>
             </article>
             <article className="casa-feature">
+              <img className="casa-feature-image" src={wohnenKuecheImage} alt="Offener Wohnbereich mit Küche" loading="lazy" />
               <p className="feature-number">02</p>
               <div><h3>Wohnen &amp; Küche</h3><p>Flat-TV mit Satellitenempfang und Amazon Fire TV Stick · Klimaanlage und Heizung · kostenloses WLAN · Sofa · Geschirrspüler · Gasherd · Backofen · Kühlschrank mit Gefrierfach · Mikrowelle · Lavazza Kaffee- und Espressomaschine · gute Küchenausstattung</p></div>
             </article>
             <article className="casa-feature">
+              <img className="casa-feature-image" src={terrasseImage} alt="Terrasse mit Blick in die sardische Landschaft" loading="lazy" />
               <p className="feature-number">03</p>
               <div><h3>Terrasse</h3><p>Die große Terrasse mit angrenzendem Privatpool bietet einen unverbauten Panoramablick. Hier befinden sich die Außendusche mit Warmwasser, die praktische Außenküche und, separat untergebracht, die Waschmaschine.</p></div>
             </article>
             <article className="casa-feature">
+              <img className="casa-feature-image" src={badezimmerImage} alt="Badezimmer der Casa" loading="lazy" />
               <p className="feature-number">04</p>
               <div><h3>Badezimmer</h3><p>Geräumig und mit Fenster · Waschbecken · Dusche · WC · Bidet · Ablageflächen</p></div>
             </article>
             <article className="casa-feature">
+              <img className="casa-feature-image" src={schlafzimmerImage} alt="Schlafzimmer mit Doppelbett" loading="lazy" />
               <p className="feature-number">05</p>
               <div><h3>Schlafzimmer</h3><p>Doppelbett 160 × 200 cm · Klimaanlage und Heizung · großer Kleiderschrank · Kommode · Spiegel · Nachttische · direkter Zugang zum Außenbereich</p></div>
             </article>
             <article className="casa-feature">
+              <img className="casa-feature-image" src={kinderzimmerImage} alt="Schlafzimmer mit zwei Einzelbetten" loading="lazy" />
               <p className="feature-number">06</p>
               <div><h3>Schlafzimmer</h3><p>Zwei Einzelbetten 90 × 200 cm, als Doppelbett 180 × 200 cm nutzbar · Klimaanlage und Heizung · Kleiderschrank · Nachttische</p></div>
             </article>
             <article className="casa-feature">
+              <img className="casa-feature-image" src={gartenImage} alt="Mediterran angelegter Garten" loading="lazy" />
               <p className="feature-number">07</p>
               <div><h3>Garten</h3><p>Der große Garten grenzt an ein Naturschutzgebiet und ist terrassenartig und liebevoll mediterran angelegt. Der Blick schweift weit in die reizvolle, landestypische Natur. Es gibt viel Platz für Ruhe und Privatsphäre.</p></div>
             </article>
