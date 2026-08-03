@@ -196,21 +196,6 @@ function App() {
           <p>La dolce vita</p>
           <blockquote>„Zuhause ist kein Ort –<br />Zuhause ist ein Gefühl.“</blockquote>
         </section>
-
-        <section className="gallery-section" id="galerie">
-          <div className="gallery-intro">
-            <div className="section-number">02 <span /></div>
-            <div><p className="eyebrow dark">Impressionen</p><h2>Augenblicke<br /><em>am Meer.</em></h2></div>
-            <p>Ein Haus zwischen Himmel und Macchia. Entdecken Sie die stillen Ecken, das warme Licht und den Blick auf Sardiniens Küste.</p>
-          </div>
-          <div className="gallery-grid">
-            {gallery.map((photo, index) => <button className={`gallery-card ${photo.className ?? ""}`} key={photo.id} onClick={() => setActivePhoto(index)} aria-label={`${photo.title} vergrößern`}>
-              <img src={photo.src} style={{ objectPosition: photo.position }} alt={photo.title} loading="lazy" />
-              <span className="gallery-overlay"><small>{String(index + 1).padStart(2, "0")}</small><b>＋</b></span>
-            </button>)}
-          </div>
-        </section>
-
         <section className="casa-section" aria-labelledby="casa-title">
           <div className="casa-intro">
             <div className="section-number">03 <span /></div>
@@ -267,6 +252,21 @@ function App() {
             </article>
           </div>
         </section>
+        <section className="gallery-section" id="galerie">
+          <div className="gallery-intro">
+            <div className="section-number">02 <span /></div>
+            <div><p className="eyebrow dark">Impressionen</p><h2>Augenblicke<br /><em>am Meer.</em></h2></div>
+            <p>Ein Haus zwischen Himmel und Macchia. Entdecken Sie die stillen Ecken, das warme Licht und den Blick auf Sardiniens Küste.</p>
+          </div>
+          <div className="gallery-grid">
+            {gallery.map((photo, index) => <button className={`gallery-card ${photo.className ?? ""}`} key={photo.id} onClick={() => setActivePhoto(index)} aria-label={`${photo.title} vergrößern`}>
+              <img src={photo.src} style={{ objectPosition: photo.position }} alt={photo.title} loading="lazy" />
+              <span className="gallery-overlay"><small>{String(index + 1).padStart(2, "0")}</small><b>＋</b></span>
+            </button>)}
+          </div>
+        </section>
+
+
       </main>}
 
       {activePhoto !== null && <div className="lightbox" role="dialog" aria-modal="true" aria-label="Bildergalerie" onClick={() => setActivePhoto(null)}>
