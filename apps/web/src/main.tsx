@@ -192,6 +192,11 @@ function App() {
           </div>
         </section>
 
+        <section className="quote" id="casa">
+          <p>La dolce vita</p>
+          <blockquote>„Zuhause ist kein Ort –<br />Zuhause ist ein Gefühl.“</blockquote>
+        </section>
+
         <section className="gallery-section" id="galerie">
           <div className="gallery-intro">
             <div className="section-number">02 <span /></div>
@@ -204,11 +209,6 @@ function App() {
               <span className="gallery-overlay"><small>{String(index + 1).padStart(2, "0")}</small><b>＋</b></span>
             </button>)}
           </div>
-        </section>
-
-        <section className="quote" id="casa">
-          <p>La dolce vita</p>
-          <blockquote>„Zuhause ist kein Ort –<br />Zuhause ist ein Gefühl.“</blockquote>
         </section>
 
         <section className="casa-section" aria-labelledby="casa-title">
