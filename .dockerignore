@@ -1,0 +1,6 @@
+.git
+.env
+node_modules
+apps/*/dist
+apps/api/data/media
+npm-debug.log*

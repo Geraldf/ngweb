@@ -18,6 +18,7 @@ type MediaItem = {
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const dataDirectory = path.resolve(process.env.MEDIA_DATA_DIR ?? "data/media");
+const webDirectory = process.env.WEB_DIST_DIR ? path.resolve(process.env.WEB_DIST_DIR) : undefined;
 const filesDirectory = path.join(dataDirectory, "files");
 const indexFile = path.join(dataDirectory, "media.json");
 const supportedTypes: Record<string, string> = {
@@ -162,6 +163,13 @@ app.delete("/api/media/:id", async (request, response, next) => {
     next(error);
   }
 });
+
+if (webDirectory) {
+  app.use(express.static(webDirectory, { index: "index.html", maxAge: "1h" }));
+  app.get("/{*path}", (_request, response) => {
+    response.sendFile(path.join(webDirectory, "index.html"));
+  });
+}
 
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
   console.error(error);

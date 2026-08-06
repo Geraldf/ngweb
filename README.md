@@ -37,6 +37,10 @@ Run `npm run governance:install` once after cloning to enable the tracked Git ch
 
 Environment variables are documented in `.env.example`. Keep local `.env` files out of version control.
 
+## Production
+
+The production image serves the built website and API from one origin on port 80, with uploaded media in a persistent volume. See [the Proxmox VM deployment runbook](docs/production-deployment.md).
+
 ## Image management
 
 Use the **Bilder verwalten** button on the website to upload, rename, reorder, place, or delete images. New uploads are shown in the public gallery by default and can be changed to **Nur Bibliothek** to keep them off the website without deleting them.
