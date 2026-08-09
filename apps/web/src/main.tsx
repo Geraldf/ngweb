@@ -1,5 +1,5 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import ausstattungImage from "./assets/Ausstattung.jpg";
 import badezimmerImage from "./assets/BadeZimmer.jpeg";
@@ -14,6 +14,7 @@ import "./styles.css";
 const links = ["Home", "La Casa", "Galerie", "Lage & Infos", "Preise & Kalender"];
 type MediaItem = { id: string; filename: string; title: string; mimeType: string; placement: "library" | "gallery"; order: number; createdAt: string };
 type GalleryPhoto = { id: string; src: string; title: string; position?: string; className?: string };
+type BookingRange = { arrival: string; departure: string };
 
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
@@ -25,6 +26,9 @@ function App() {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [mediaError, setMediaError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [bookings, setBookings] = useState<BookingRange[]>([]);
+  const [bookingStatus, setBookingStatus] = useState("");
+  const [bookingBusy, setBookingBusy] = useState(false);
 
   const gallery = useMemo<GalleryPhoto[]>(() =>
     media.filter((item) => item.placement === "gallery").sort((a, b) => a.order - b.order).map((item) => ({
@@ -45,7 +49,31 @@ function App() {
     }
   };
 
-  useEffect(() => { void loadMedia(); }, []);
+  useEffect(() => {
+    void loadMedia();
+    void fetch(`${apiBase}/api/bookings`).then((response) => response.ok ? response.json() : []).then((items) => setBookings(items as BookingRange[]));
+  }, []);
+
+  const submitBooking = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBookingBusy(true);
+    setBookingStatus("");
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form));
+    try {
+      const response = await fetch(`${apiBase}/api/bookings`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const result = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(result.message ?? "Die Anfrage konnte nicht gesendet werden.");
+      setBookingStatus("Vielen Dank! Wir haben Ihre Anfrage erhalten und melden uns persönlich bei Ihnen.");
+      form.reset();
+      const ranges = await fetch(`${apiBase}/api/bookings`).then((reply) => reply.json()) as BookingRange[];
+      setBookings(ranges);
+    } catch (error) {
+      setBookingStatus(error instanceof Error ? error.message : "Die Anfrage konnte nicht gesendet werden.");
+    } finally {
+      setBookingBusy(false);
+    }
+  };
 
   useEffect(() => {
     document.body.classList.toggle("menu-open", menuOpen);
@@ -263,6 +291,36 @@ function App() {
               <img src={photo.src} style={{ objectPosition: photo.position }} alt={photo.title} loading="lazy" />
               <span className="gallery-overlay"><small>{String(index + 1).padStart(2, "0")}</small><b>＋</b></span>
             </button>)}
+          </div>
+        </section>
+
+        <section className="prices-section" id="preise" aria-labelledby="prices-title">
+          <div className="prices-intro">
+            <div className="section-number">04 <span /></div>
+            <div><p className="eyebrow dark">Preise &amp; Kalender</p><h2 id="prices-title">Zeit für<br /><em>Sardinien.</em></h2></div>
+            <p>Die Casa bietet Platz für bis zu vier Personen. Wählen Sie Ihren Reisezeitraum und senden Sie uns direkt Ihre unverbindliche Buchungsanfrage.</p>
+          </div>
+          <div className="rate-grid">
+            <article><small>November – März</small><h3>€ 120</h3><p>pro Nacht · Nebensaison</p></article>
+            <article><small>April – Juni · Oktober</small><h3>€ 160</h3><p>pro Nacht · Zwischensaison</p></article>
+            <article><small>Juli – September</small><h3>€ 210</h3><p>pro Nacht · Hauptsaison</p></article>
+          </div>
+          <p className="price-note">Mindestaufenthalt 5 Nächte · Endreinigung € 120 · Bettwäsche und Handtücher inklusive · Alle Preise verstehen sich für das gesamte Haus.</p>
+          <div className="booking-layout">
+            <div className="availability-copy">
+              <p className="eyebrow dark">Verfügbarkeit</p>
+              <h3>Ihre Auszeit<br /><em>anfragen.</em></h3>
+              <p>Bereits angefragte Zeiträume werden bei der Auswahl automatisch geprüft. Ihre Reservierung ist erst nach unserer persönlichen Bestätigung verbindlich.</p>
+              {bookings.length > 0 && <div className="occupied-dates"><strong>Aktuell nicht verfügbar</strong>{bookings.map((range) => <span key={`${range.arrival}-${range.departure}`}>{new Date(`${range.arrival}T00:00:00`).toLocaleDateString("de-DE")} – {new Date(`${range.departure}T00:00:00`).toLocaleDateString("de-DE")}</span>)}</div>}
+            </div>
+            <form className="booking-form" onSubmit={submitBooking}>
+              <div className="form-row"><label>Anreise<input required name="arrival" type="date" min={new Date().toISOString().slice(0, 10)} /></label><label>Abreise<input required name="departure" type="date" min={new Date().toISOString().slice(0, 10)} /></label></div>
+              <div className="form-row"><label>Name<input required name="name" autoComplete="name" /></label><label>E-Mail<input required name="email" type="email" autoComplete="email" /></label></div>
+              <label>Gäste<select name="guests" defaultValue="2"><option value="1">1 Person</option><option value="2">2 Personen</option><option value="3">3 Personen</option><option value="4">4 Personen</option></select></label>
+              <label>Nachricht (optional)<textarea name="message" rows={4} placeholder="Was dürfen wir über Ihre Reise wissen?" /></label>
+              <button disabled={bookingBusy} type="submit">{bookingBusy ? "Wird gesendet …" : "Verfügbarkeit prüfen & anfragen"}<span>→</span></button>
+              {bookingStatus && <p className="booking-status" role="status">{bookingStatus}</p>}
+            </form>
           </div>
         </section>
 

@@ -15,12 +15,24 @@ type MediaItem = {
   createdAt: string;
 };
 
+type Booking = {
+  id: string;
+  arrival: string;
+  departure: string;
+  name: string;
+  email: string;
+  guests: number;
+  message: string;
+  createdAt: string;
+};
+
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const dataDirectory = path.resolve(process.env.MEDIA_DATA_DIR ?? "data/media");
 const webDirectory = process.env.WEB_DIST_DIR ? path.resolve(process.env.WEB_DIST_DIR) : undefined;
 const filesDirectory = path.join(dataDirectory, "files");
 const indexFile = path.join(dataDirectory, "media.json");
+const bookingsFile = path.join(dataDirectory, "bookings.json");
 const supportedTypes: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
@@ -46,6 +58,20 @@ async function saveMedia(items: MediaItem[]) {
   await writeFile(indexFile, JSON.stringify(items, null, 2));
 }
 
+async function readBookings(): Promise<Booking[]> {
+  try {
+    return JSON.parse(await readFile(bookingsFile, "utf8")) as Booking[];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+async function saveBookings(bookings: Booking[]) {
+  await mkdir(dataDirectory, { recursive: true });
+  await writeFile(bookingsFile, JSON.stringify(bookings, null, 2));
+}
+
 app.get("/api/health", (_request, response) => {
   response.json({ status: "ok", service: "fuchsclan-api" });
 });
@@ -53,6 +79,48 @@ app.get("/api/health", (_request, response) => {
 app.get("/api/media", async (_request, response, next) => {
   try {
     response.json(await readMedia());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/bookings", async (_request, response, next) => {
+  try {
+    const bookings = await readBookings();
+    response.json(bookings.map(({ arrival, departure }) => ({ arrival, departure })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/bookings", async (request, response, next) => {
+  try {
+    const { arrival, departure, name, email, guests, message = "" } = request.body as Record<string, unknown>;
+    const arrivalDate = typeof arrival === "string" ? arrival : "";
+    const departureDate = typeof departure === "string" ? departure : "";
+    const start = new Date(`${arrivalDate}T00:00:00Z`);
+    const end = new Date(`${departureDate}T00:00:00Z`);
+    const guestCount = Number(guests);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start ||
+        typeof name !== "string" || !name.trim() || typeof email !== "string" || !email.includes("@") ||
+        !Number.isInteger(guestCount) || guestCount < 1 || guestCount > 4) {
+      response.status(400).json({ message: "Bitte prüfen Sie Ihre Reisedaten und Kontaktdaten." });
+      return;
+    }
+    const bookings = await readBookings();
+    const overlaps = bookings.some((booking) => arrivalDate < booking.departure && departureDate > booking.arrival);
+    if (overlaps) {
+      response.status(409).json({ message: "Dieser Zeitraum ist leider nicht mehr verfügbar." });
+      return;
+    }
+    const booking: Booking = {
+      id: randomUUID(), arrival: arrivalDate, departure: departureDate, name: name.trim().slice(0, 120),
+      email: email.trim().slice(0, 200), guests: guestCount,
+      message: typeof message === "string" ? message.trim().slice(0, 2000) : "",
+      createdAt: new Date().toISOString(),
+    };
+    await saveBookings([...bookings, booking]);
+    response.status(201).json({ id: booking.id, message: "Ihre Buchungsanfrage ist bei uns eingegangen." });
   } catch (error) {
     next(error);
   }

@@ -101,6 +101,31 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .gallery-card.tall { grid-row: span 2; }
 .gallery-card img { width: 100%; height: 100%; display: block; object-fit: cover; transition: transform .8s cubic-bezier(.2,.7,.2,1); }
 .gallery-card:hover img { transform: scale(1.035); }
+.prices-section { padding: 145px 5vw 160px; background: #f3f0e8; }
+.prices-intro { max-width: 1320px; margin: 0 auto 80px; display: grid; grid-template-columns: 12% 47% 1fr; gap: 5%; align-items: end; }
+.prices-intro h2 { margin: 0; font: 400 clamp(55px, 6.4vw, 98px)/.95 "Italiana", serif; letter-spacing: -.03em; }
+.prices-intro h2 em, .availability-copy h3 em { color: #828775; font-weight: 400; }
+.prices-intro > p { margin: 0 0 8px; color: #666a61; font-size: 13px; line-height: 1.9; }
+.rate-grid { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); border: solid #c9c7bd; border-width: 1px 0; }
+.rate-grid article { padding: 42px 7%; border-right: 1px solid #c9c7bd; }
+.rate-grid article:last-child { border: 0; }
+.rate-grid small { color: #777a70; font-size: 9px; text-transform: uppercase; letter-spacing: .16em; }
+.rate-grid h3 { margin: 20px 0 5px; font: 400 48px "Italiana", serif; }
+.rate-grid p, .price-note { color: #666a61; font-size: 12px; }
+.price-note { max-width: 1320px; margin: 22px auto 120px; line-height: 1.7; }
+.booking-layout { max-width: 1320px; margin: 0 auto; padding: 75px 7%; display: grid; grid-template-columns: .85fr 1.15fr; gap: 10%; background: #e8e4da; }
+.availability-copy h3 { margin: 0 0 28px; font: 400 clamp(42px, 4.4vw, 68px)/1 "Italiana", serif; }
+.availability-copy > p:not(.eyebrow) { color: #666a61; font-size: 13px; line-height: 1.9; }
+.occupied-dates { margin-top: 35px; padding-top: 25px; border-top: 1px solid #c1bfb5; display: grid; gap: 8px; color: #666a61; font-size: 11px; }
+.occupied-dates strong { margin-bottom: 5px; color: #263127; text-transform: uppercase; letter-spacing: .15em; font-size: 9px; }
+.booking-form { display: grid; gap: 19px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.booking-form label { color: #6b6f66; font-size: 9px; text-transform: uppercase; letter-spacing: .15em; }
+.booking-form input, .booking-form select, .booking-form textarea { width: 100%; margin-top: 8px; padding: 13px 12px; border: 1px solid #bbb9af; border-radius: 0; background: #f7f4ed; color: #263127; font: 13px "DM Sans", sans-serif; }
+.booking-form textarea { resize: vertical; }
+.booking-form button { padding: 17px 20px; border: 0; background: #263127; color: white; display: flex; justify-content: space-between; cursor: pointer; text-transform: uppercase; letter-spacing: .15em; font-size: 9px; }
+.booking-form button:disabled { opacity: .65; }
+.booking-status { margin: 0; color: #3f5742; font-size: 12px; line-height: 1.6; }
 .gallery-overlay { position: absolute; inset: auto 0 0; padding: 70px 28px 25px; display: flex; justify-content: space-between; align-items: center; gap: 17px; background: linear-gradient(transparent, rgba(18,24,19,.72)); }
 .gallery-overlay small { font-size: 8px; letter-spacing: .2em; }
 .gallery-overlay b { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.65); border-radius: 50%; font-weight: 300; }
@@ -171,6 +196,16 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .gallery-grid { display: block; }
   .gallery-card { width: 100%; height: 330px; margin-bottom: 14px; }
   .gallery-card.tall { height: 480px; }
+  .prices-section { padding: 95px 24px 100px; }
+  .prices-intro { margin-bottom: 55px; display: block; }
+  .prices-intro .section-number { margin-bottom: 45px; }
+  .prices-intro > p { margin-top: 35px; }
+  .rate-grid { grid-template-columns: 1fr; }
+  .rate-grid article { padding: 30px 0; border-right: 0; border-bottom: 1px solid #c9c7bd; }
+  .price-note { margin-bottom: 70px; }
+  .booking-layout { padding: 48px 24px; display: block; }
+  .availability-copy { margin-bottom: 50px; }
+  .form-row { grid-template-columns: 1fr; }
   .lightbox { padding: 70px 20px 30px; grid-template-columns: 38px 1fr 38px; }
   .lightbox figure { height: 70vh; }
   .media-manager { padding: 35px 20px; }
