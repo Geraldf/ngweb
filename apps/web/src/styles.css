@@ -203,6 +203,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .booking-manager input, .booking-manager select, .booking-manager textarea { width: 100%; margin-top: 7px; padding: 10px; border: 1px solid #c2c0b6; border-radius: 0; background: #f7f4ed; color: #263127; font: 12px "DM Sans", sans-serif; }
 .booking-create { margin-bottom: 28px; padding: 22px; border: 1px solid #c9c7bd; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: end; }
 .booking-create h3 { grid-column: 1 / -1; margin: 0 0 5px; font: 400 28px "Italiana", serif; }
+.booking-create-hint { grid-column: 1 / -1; margin: -6px 0 6px; color: #777a70; font-size: 11px; line-height: 1.6; }
 .booking-message-field { grid-column: span 2; }
 .admin-booking-list { display: grid; gap: 14px; }
 .admin-booking { padding: 22px; background: #e8e4da; }

@@ -522,18 +522,19 @@ function App() {
             <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird geladen …" : "Buchungen laden"}</button>
           </form>
           {adminError && <p className="manager-error" role="alert">{adminError}</p>}
+          <form className="booking-create" onSubmit={createAdminBooking}>
+            <h3>Neue Buchung hinzufügen</h3>
+            <p className="booking-create-hint">Tragen Sie oben den Verwaltungsschlüssel und hier die Buchungsdaten ein. Bestehende Buchungen müssen vorher nicht geladen werden.</p>
+            <label>Anreise<input type="date" name="arrival" required /></label>
+            <label>Abreise<input type="date" name="departure" required /></label>
+            <label>Status<select name="status"><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
+            <label>Name<input name="name" required /></label>
+            <label>E-Mail<input name="email" type="email" required /></label>
+            <label>Gäste<input name="guests" type="number" min="1" max="4" defaultValue="2" required /></label>
+            <label className="booking-message-field">Nachricht<textarea name="message" rows={2} /></label>
+            <button type="submit" disabled={adminBusy || !adminToken.trim()}>{adminBusy ? "Wird angelegt …" : "＋ Buchung hinzufügen"}</button>
+          </form>
           {adminAuthenticated && <>
-            <form className="booking-create" onSubmit={createAdminBooking}>
-              <h3>Neue Buchung</h3>
-              <label>Anreise<input type="date" name="arrival" required /></label>
-              <label>Abreise<input type="date" name="departure" required /></label>
-              <label>Status<select name="status"><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
-              <label>Name<input name="name" required /></label>
-              <label>E-Mail<input name="email" type="email" required /></label>
-              <label>Gäste<input name="guests" type="number" min="1" max="4" defaultValue="2" required /></label>
-              <label className="booking-message-field">Nachricht<textarea name="message" rows={2} /></label>
-              <button type="submit" disabled={adminBusy}>＋ Anlegen</button>
-            </form>
             {adminBookings.length > 0 ? <div className="admin-booking-list">{adminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
               <div className="admin-booking-heading"><strong>{booking.name}</strong><span className={`booking-badge is-${booking.status}`}>{booking.status === "booked" ? "Gebucht" : "Reserviert"}</span></div>
               <div className="admin-booking-fields">
