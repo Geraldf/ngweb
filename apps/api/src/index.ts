@@ -19,6 +19,7 @@ type Booking = {
   id: string;
   arrival: string;
   departure: string;
+  status?: "reserved" | "booked";
   name: string;
   email: string;
   guests: number;
@@ -87,7 +88,11 @@ app.get("/api/media", async (_request, response, next) => {
 app.get("/api/bookings", async (_request, response, next) => {
   try {
     const bookings = await readBookings();
-    response.json(bookings.map(({ arrival, departure }) => ({ arrival, departure })));
+    response.json(bookings.map(({ arrival, departure, status }) => ({
+      arrival,
+      departure,
+      status: status === "booked" ? "booked" : "reserved",
+    })));
   } catch (error) {
     next(error);
   }
@@ -114,7 +119,7 @@ app.post("/api/bookings", async (request, response, next) => {
       return;
     }
     const booking: Booking = {
-      id: randomUUID(), arrival: arrivalDate, departure: departureDate, name: name.trim().slice(0, 120),
+      id: randomUUID(), arrival: arrivalDate, departure: departureDate, status: "reserved", name: name.trim().slice(0, 120),
       email: email.trim().slice(0, 200), guests: guestCount,
       message: typeof message === "string" ? message.trim().slice(0, 2000) : "",
       createdAt: new Date().toISOString(),

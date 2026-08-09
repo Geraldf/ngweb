@@ -14,7 +14,41 @@ import "./styles.css";
 const links = ["Home", "La Casa", "Galerie", "Lage & Infos", "Preise & Kalender"];
 type MediaItem = { id: string; filename: string; title: string; mimeType: string; placement: "library" | "gallery"; order: number; createdAt: string };
 type GalleryPhoto = { id: string; src: string; title: string; position?: string; className?: string };
-type BookingRange = { arrival: string; departure: string };
+type BookingStatus = "reserved" | "booked";
+type BookingRange = { arrival: string; departure: string; status: BookingStatus };
+
+const dayNames = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+const monthFormatter = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" });
+const fullDateFormatter = new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+function isoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange[] }) {
+  const year = month.getUTCFullYear();
+  const monthIndex = month.getUTCMonth();
+  const leadingDays = (month.getUTCDay() + 6) % 7;
+  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const cells = Array.from({ length: leadingDays + daysInMonth }, (_, index) => index < leadingDays ? null : index - leadingDays + 1);
+
+  return <article className="booking-month">
+    <h4>{monthFormatter.format(month)}</h4>
+    <div className="calendar-grid" role="grid" aria-label={monthFormatter.format(month)}>
+      {dayNames.map((day) => <span className="calendar-weekday" role="columnheader" key={day}>{day}</span>)}
+      {cells.map((day, index) => {
+        if (day === null) return <span className="calendar-day is-empty" aria-hidden="true" key={`empty-${index}`} />;
+        const date = new Date(Date.UTC(year, monthIndex, day));
+        const dateKey = isoDate(date);
+        const status = bookings.find((booking) => booking.arrival <= dateKey && dateKey < booking.departure)?.status;
+        const statusLabel = status === "booked" ? "Gebucht" : status === "reserved" ? "Reserviert" : "Verfügbar";
+        return <span className={`calendar-day${status ? ` is-${status}` : ""}`} role="gridcell" aria-label={`${fullDateFormatter.format(date)}: ${statusLabel}`} key={dateKey}>
+          <time dateTime={dateKey}>{day}</time>
+        </span>;
+      })}
+    </div>
+  </article>;
+}
 
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
@@ -29,6 +63,10 @@ function App() {
   const [bookings, setBookings] = useState<BookingRange[]>([]);
   const [bookingStatus, setBookingStatus] = useState("");
   const [bookingBusy, setBookingBusy] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+  });
 
   const gallery = useMemo<GalleryPhoto[]>(() =>
     media.filter((item) => item.placement === "gallery").sort((a, b) => a.order - b.order).map((item) => ({
@@ -37,6 +75,11 @@ function App() {
       title: item.title,
     })), [media]);
   const sortedMedia = useMemo(() => [...media].sort((a, b) => a.order - b.order), [media]);
+  const activeBookings = useMemo(() => {
+    const today = isoDate(new Date());
+    return bookings.filter((booking) => booking.departure > today && (booking.status === "reserved" || booking.status === "booked"));
+  }, [bookings]);
+  const visibleMonths = useMemo(() => [calendarMonth, new Date(Date.UTC(calendarMonth.getUTCFullYear(), calendarMonth.getUTCMonth() + 1, 1))], [calendarMonth]);
 
   const loadMedia = async () => {
     try {
@@ -51,7 +94,7 @@ function App() {
 
   useEffect(() => {
     void loadMedia();
-    void fetch(`${apiBase}/api/bookings`).then((response) => response.ok ? response.json() : []).then((items) => setBookings(items as BookingRange[]));
+    void fetch(`${apiBase}/api/bookings`).then((response) => response.ok ? response.json() : []).then((items) => setBookings(items as BookingRange[])).catch(() => setBookings([]));
   }, []);
 
   const submitBooking = async (event: FormEvent<HTMLFormElement>) => {
@@ -306,12 +349,24 @@ function App() {
             <article><small>Juli – September</small><h3>€ 210</h3><p>pro Nacht · Hauptsaison</p></article>
           </div>
           <p className="price-note">Mindestaufenthalt 5 Nächte · Endreinigung € 120 · Bettwäsche und Handtücher inklusive · Alle Preise verstehen sich für das gesamte Haus.</p>
+          <div className="booking-calendar" aria-labelledby="calendar-title">
+            <div className="calendar-header">
+              <div><p className="eyebrow dark">Belegungskalender</p><h3 id="calendar-title">Verfügbarkeit<br /><em>auf einen Blick.</em></h3></div>
+              <div className="calendar-controls">
+                <button type="button" onClick={() => setCalendarMonth((month) => new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() - 1, 1)))} aria-label="Vorherige Monate">←</button>
+                <button type="button" onClick={() => { const now = new Date(); setCalendarMonth(new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1))); }}>Heute</button>
+                <button type="button" onClick={() => setCalendarMonth((month) => new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 1)))} aria-label="Nächste Monate">→</button>
+              </div>
+            </div>
+            <div className="calendar-months">{visibleMonths.map((month) => <BookingMonth month={month} bookings={activeBookings} key={month.toISOString()} />)}</div>
+            <div className="calendar-legend" aria-label="Kalenderlegende"><span><i className="is-reserved" />Reserviert</span><span><i className="is-booked" />Gebucht</span><span><i />Verfügbar</span></div>
+          </div>
           <div className="booking-layout">
             <div className="availability-copy">
               <p className="eyebrow dark">Verfügbarkeit</p>
               <h3>Ihre Auszeit<br /><em>anfragen.</em></h3>
               <p>Bereits angefragte Zeiträume werden bei der Auswahl automatisch geprüft. Ihre Reservierung ist erst nach unserer persönlichen Bestätigung verbindlich.</p>
-              {bookings.length > 0 && <div className="occupied-dates"><strong>Aktuell nicht verfügbar</strong>{bookings.map((range) => <span key={`${range.arrival}-${range.departure}`}>{new Date(`${range.arrival}T00:00:00`).toLocaleDateString("de-DE")} – {new Date(`${range.departure}T00:00:00`).toLocaleDateString("de-DE")}</span>)}</div>}
+              {activeBookings.length > 0 && <div className="occupied-dates"><strong>Aktuell nicht verfügbar</strong>{activeBookings.map((range) => <span key={`${range.arrival}-${range.departure}`}><i className={`is-${range.status}`} />{new Date(`${range.arrival}T00:00:00`).toLocaleDateString("de-DE")} – {new Date(`${range.departure}T00:00:00`).toLocaleDateString("de-DE")} · {range.status === "booked" ? "Gebucht" : "Reserviert"}</span>)}</div>}
             </div>
             <form className="booking-form" onSubmit={submitBooking}>
               <div className="form-row"><label>Anreise<input required name="arrival" type="date" min={new Date().toISOString().slice(0, 10)} /></label><label>Abreise<input required name="departure" type="date" min={new Date().toISOString().slice(0, 10)} /></label></div>
