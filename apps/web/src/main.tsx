@@ -233,6 +233,11 @@ function App() {
     else setMediaError("Das Bild konnte nicht gelöscht werden.");
   };
 
+  const openBookingManager = () => {
+    setManagerSection("bookings");
+    setManagerOpen(true);
+  };
+
   const createAdminBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setAdminBusy(true);
@@ -446,7 +451,10 @@ function App() {
               </div>
             </div>
             <div className="calendar-months">{visibleMonths.map((month) => <BookingMonth month={month} bookings={activeBookings} key={month.toISOString()} />)}</div>
-            <div className="calendar-legend" aria-label="Kalenderlegende"><span><i className="is-reserved" />Reserviert</span><span><i className="is-booked" />Gebucht</span><span><i />Verfügbar</span></div>
+            <div className="calendar-footer">
+              <div className="calendar-legend" aria-label="Kalenderlegende"><span><i className="is-reserved" />Reserviert</span><span><i className="is-booked" />Gebucht</span><span><i />Verfügbar</span></div>
+              <button className="manage-bookings-button" type="button" onClick={openBookingManager}>Buchungen verwalten <span>→</span></button>
+            </div>
           </div>
           <div className="booking-layout">
             <div className="availability-copy">
