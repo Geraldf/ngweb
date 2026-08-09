@@ -1,7 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -26,6 +26,8 @@ type Booking = {
   message: string;
   createdAt: string;
 };
+
+type BookingFields = Omit<Booking, "id" | "createdAt">;
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -73,6 +75,47 @@ async function saveBookings(bookings: Booking[]) {
   await writeFile(bookingsFile, JSON.stringify(bookings, null, 2));
 }
 
+function bookingFields(body: Record<string, unknown>): BookingFields | undefined {
+  const arrival = typeof body.arrival === "string" ? body.arrival : "";
+  const departure = typeof body.departure === "string" ? body.departure : "";
+  const start = new Date(`${arrival}T00:00:00Z`);
+  const end = new Date(`${departure}T00:00:00Z`);
+  const guests = Number(body.guests);
+  const status = body.status === "booked" ? "booked" : "reserved";
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start ||
+      typeof body.name !== "string" || !body.name.trim() || typeof body.email !== "string" || !body.email.includes("@") ||
+      !Number.isInteger(guests) || guests < 1 || guests > 4) return undefined;
+  return {
+    arrival,
+    departure,
+    status,
+    name: body.name.trim().slice(0, 120),
+    email: body.email.trim().slice(0, 200),
+    guests,
+    message: typeof body.message === "string" ? body.message.trim().slice(0, 2000) : "",
+  };
+}
+
+function overlapsBooking(bookings: Booking[], fields: BookingFields, ignoredId?: string) {
+  return bookings.some((booking) => booking.id !== ignoredId && fields.arrival < booking.departure && fields.departure > booking.arrival);
+}
+
+function requireBookingAdmin(request: express.Request, response: express.Response, next: express.NextFunction) {
+  const expected = process.env.BOOKING_ADMIN_TOKEN;
+  if (!expected) {
+    response.status(503).json({ message: "Die Buchungsverwaltung ist nicht konfiguriert." });
+    return;
+  }
+  const supplied = request.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  if (expectedBuffer.length !== suppliedBuffer.length || !timingSafeEqual(expectedBuffer, suppliedBuffer)) {
+    response.status(401).json({ message: "Der Verwaltungsschlüssel ist ungültig." });
+    return;
+  }
+  next();
+}
+
 app.get("/api/health", (_request, response) => {
   response.json({ status: "ok", service: "fuchsclan-api" });
 });
@@ -100,32 +143,91 @@ app.get("/api/bookings", async (_request, response, next) => {
 
 app.post("/api/bookings", async (request, response, next) => {
   try {
-    const { arrival, departure, name, email, guests, message = "" } = request.body as Record<string, unknown>;
-    const arrivalDate = typeof arrival === "string" ? arrival : "";
-    const departureDate = typeof departure === "string" ? departure : "";
-    const start = new Date(`${arrivalDate}T00:00:00Z`);
-    const end = new Date(`${departureDate}T00:00:00Z`);
-    const guestCount = Number(guests);
-    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start ||
-        typeof name !== "string" || !name.trim() || typeof email !== "string" || !email.includes("@") ||
-        !Number.isInteger(guestCount) || guestCount < 1 || guestCount > 4) {
+    const fields = bookingFields({ ...(request.body as Record<string, unknown>), status: "reserved" });
+    if (!fields) {
       response.status(400).json({ message: "Bitte prüfen Sie Ihre Reisedaten und Kontaktdaten." });
       return;
     }
     const bookings = await readBookings();
-    const overlaps = bookings.some((booking) => arrivalDate < booking.departure && departureDate > booking.arrival);
-    if (overlaps) {
+    if (overlapsBooking(bookings, fields)) {
       response.status(409).json({ message: "Dieser Zeitraum ist leider nicht mehr verfügbar." });
       return;
     }
     const booking: Booking = {
-      id: randomUUID(), arrival: arrivalDate, departure: departureDate, status: "reserved", name: name.trim().slice(0, 120),
-      email: email.trim().slice(0, 200), guests: guestCount,
-      message: typeof message === "string" ? message.trim().slice(0, 2000) : "",
+      id: randomUUID(),
+      ...fields,
       createdAt: new Date().toISOString(),
     };
     await saveBookings([...bookings, booking]);
     response.status(201).json({ id: booking.id, message: "Ihre Buchungsanfrage ist bei uns eingegangen." });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/admin/bookings", requireBookingAdmin, async (_request, response, next) => {
+  try {
+    const bookings = await readBookings();
+    response.json(bookings.map((booking) => ({ ...booking, status: booking.status === "booked" ? "booked" : "reserved" })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/admin/bookings", requireBookingAdmin, async (request, response, next) => {
+  try {
+    const fields = bookingFields(request.body as Record<string, unknown>);
+    if (!fields) {
+      response.status(400).json({ message: "Bitte prüfen Sie alle Buchungsdaten." });
+      return;
+    }
+    const bookings = await readBookings();
+    if (overlapsBooking(bookings, fields)) {
+      response.status(409).json({ message: "Der Zeitraum überschneidet sich mit einer bestehenden Buchung." });
+      return;
+    }
+    const booking: Booking = { id: randomUUID(), ...fields, createdAt: new Date().toISOString() };
+    await saveBookings([...bookings, booking]);
+    response.status(201).json(booking);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch("/api/admin/bookings/:id", requireBookingAdmin, async (request, response, next) => {
+  try {
+    const bookings = await readBookings();
+    const index = bookings.findIndex((booking) => booking.id === request.params.id);
+    if (index === -1) {
+      response.status(404).json({ message: "Buchung nicht gefunden." });
+      return;
+    }
+    const fields = bookingFields({ ...bookings[index], ...(request.body as Record<string, unknown>) });
+    if (!fields) {
+      response.status(400).json({ message: "Bitte prüfen Sie alle Buchungsdaten." });
+      return;
+    }
+    if (overlapsBooking(bookings, fields, bookings[index].id)) {
+      response.status(409).json({ message: "Der Zeitraum überschneidet sich mit einer bestehenden Buchung." });
+      return;
+    }
+    bookings[index] = { ...bookings[index], ...fields };
+    await saveBookings(bookings);
+    response.json(bookings[index]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete("/api/admin/bookings/:id", requireBookingAdmin, async (request, response, next) => {
+  try {
+    const bookings = await readBookings();
+    if (!bookings.some((booking) => booking.id === request.params.id)) {
+      response.status(404).json({ message: "Buchung nicht gefunden." });
+      return;
+    }
+    await saveBookings(bookings.filter((booking) => booking.id !== request.params.id));
+    response.status(204).end();
   } catch (error) {
     next(error);
   }

@@ -19,7 +19,8 @@ Copy or clone this repository to `/opt/fuchsclan`, then run:
 ```sh
 cd /opt/fuchsclan
 cp .env.production.example .env.production
-# Set CLIENT_ORIGIN to the exact private URL users will open.
+# Set CLIENT_ORIGIN to the exact private URL users will open and
+# BOOKING_ADMIN_TOKEN to a long random secret (`openssl rand -hex 32`).
 docker compose --env-file .env.production -f compose.production.yaml up -d --build
 docker compose -f compose.production.yaml ps
 curl --fail http://127.0.0.1/api/health

@@ -10,6 +10,7 @@ services:
       MEDIA_DATA_DIR: /app/data/media
       WEB_DIST_DIR: /app/apps/web/dist
       CLIENT_ORIGIN: "${CLIENT_ORIGIN:-http://localhost}"
+      BOOKING_ADMIN_TOKEN: "${BOOKING_ADMIN_TOKEN:?Set BOOKING_ADMIN_TOKEN in .env.production}"
     volumes:
       - media_data:/app/data/media
     init: true
