@@ -569,7 +569,7 @@ function App() {
             <label>E-Mail<input name="email" type="email" required /></label>
             <label>Gäste<input name="guests" type="number" min="1" max="4" defaultValue="2" required /></label>
             <label className="booking-message-field">Nachricht<textarea name="message" rows={2} /></label>
-            <button type="submit" disabled={adminBusy || !adminToken.trim()}>{adminBusy ? "Wird angelegt …" : "＋ Buchung hinzufügen"}</button>
+            <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird angelegt …" : "＋ Buchung hinzufügen"}</button>
           </form>
           {adminAuthenticated && <>
             {adminBookings.length > 0 ? <div className="admin-booking-list">{adminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
