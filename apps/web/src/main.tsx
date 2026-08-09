@@ -17,6 +17,7 @@ type GalleryPhoto = { id: string; src: string; title: string; position?: string;
 type BookingStatus = "reserved" | "booked";
 type BookingRange = { arrival: string; departure: string; status: BookingStatus };
 type AdminBooking = BookingRange & { id: string; name: string; email: string; guests: number; message: string; createdAt: string };
+type BookingDebugEntry = { id: string; timestamp: string; operation: string; status: number | "network"; message: string };
 
 const dayNames = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const monthFormatter = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -74,6 +75,8 @@ function App() {
   const [adminBookings, setAdminBookings] = useState<AdminBooking[]>([]);
   const [adminError, setAdminError] = useState("");
   const [adminBusy, setAdminBusy] = useState(false);
+  const [bookingDebug, setBookingDebug] = useState(false);
+  const [bookingDebugEntries, setBookingDebugEntries] = useState<BookingDebugEntry[]>([]);
 
   const gallery = useMemo<GalleryPhoto[]>(() =>
     media.filter((item) => item.placement === "gallery").sort((a, b) => a.order - b.order).map((item) => ({
@@ -108,10 +111,33 @@ function App() {
     }
   };
 
-  const adminRequest = (path = "", init: RequestInit = {}) => fetch(`${apiBase}/api/admin/bookings${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}`, ...init.headers },
-  });
+  const adminRequest = async (path = "", init: RequestInit = {}) => {
+    const operation = `${init.method ?? "GET"} /api/admin/bookings${path}`;
+    try {
+      const response = await fetch(`${apiBase}/api/admin/bookings${path}`, {
+        ...init,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}`, ...init.headers },
+      });
+      if (bookingDebug) {
+        let message = response.ok ? "Anfrage erfolgreich" : response.statusText || "Anfrage fehlgeschlagen";
+        try {
+          const diagnostic = await response.clone().json() as { message?: string };
+          if (diagnostic.message) message = diagnostic.message;
+        } catch { /* Responses without JSON do not need additional diagnostics. */ }
+        const entry = { id: crypto.randomUUID(), timestamp: new Date().toLocaleTimeString("de-DE"), operation, status: response.status, message } satisfies BookingDebugEntry;
+        setBookingDebugEntries((current) => [entry, ...current].slice(0, 20));
+        console.info("[booking-debug]", entry);
+      }
+      return response;
+    } catch (error) {
+      if (bookingDebug) {
+        const entry = { id: crypto.randomUUID(), timestamp: new Date().toLocaleTimeString("de-DE"), operation, status: "network", message: error instanceof Error ? error.message : "Netzwerkfehler" } satisfies BookingDebugEntry;
+        setBookingDebugEntries((current) => [entry, ...current].slice(0, 20));
+        console.error("[booking-debug]", entry);
+      }
+      throw error;
+    }
+  };
 
   const loadAdminBookings = async () => {
     setAdminBusy(true);
@@ -517,6 +543,17 @@ function App() {
             </div>
           </article>)}</div>}</>}
         {managerSection === "bookings" && <div className="booking-manager">
+          <div className="booking-debug-toggle">
+            <label><input type="checkbox" checked={bookingDebug} onChange={(event) => setBookingDebug(event.target.checked)} /> Debug-Modus</label>
+            <span>Zeigt technische Details ohne Schlüssel oder Gästedaten.</span>
+          </div>
+          {bookingDebug && <aside className="booking-debug-panel" aria-label="Buchungsdiagnose">
+            <div className="booking-debug-heading"><strong>Diagnose</strong><button type="button" onClick={() => setBookingDebugEntries([])}>Leeren</button></div>
+            <dl><div><dt>API</dt><dd>{apiBase || window.location.origin}</dd></div><div><dt>Schlüssel</dt><dd>{adminToken.trim() ? "Eingetragen" : "Fehlt"}</dd></div></dl>
+            {bookingDebugEntries.length === 0 ? <p>Noch keine Verwaltungsanfrage ausgeführt.</p> : <ol>{bookingDebugEntries.map((entry) => <li key={entry.id} className={typeof entry.status === "number" && entry.status >= 200 && entry.status < 300 ? "is-success" : "is-error"}>
+              <time>{entry.timestamp}</time><code>{entry.operation}</code><b>{entry.status}</b><span>{entry.message}</span>
+            </li>)}</ol>}
+          </aside>}
           <form className="admin-login" onSubmit={(event) => { event.preventDefault(); void loadAdminBookings(); }}>
             <label>Verwaltungsschlüssel<input type="password" value={adminToken} onChange={(event) => setAdminToken(event.target.value)} autoComplete="current-password" required /></label>
             <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird geladen …" : "Buchungen laden"}</button>
