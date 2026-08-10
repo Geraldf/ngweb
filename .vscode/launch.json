@@ -2,6 +2,29 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug full stack",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "BOOKING_ADMIN_TOKEN": "${input:bookingAdminToken}"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"],
+      "serverReadyAction": {
+        "pattern": "Local:\\s+(https?://\\S+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome",
+        "webRoot": "${workspaceFolder}/apps/web/src"
+      }
+    },
+    {
       "name": "Debug API",
       "type": "node",
       "request": "launch",
@@ -43,13 +66,6 @@
       "port": 9229,
       "restart": true,
       "skipFiles": ["<node_internals>/**"]
-    }
-  ],
-  "compounds": [
-    {
-      "name": "Debug full stack",
-      "configurations": ["Debug API", "Debug web app"],
-      "stopAll": false
     }
   ],
   "inputs": [
