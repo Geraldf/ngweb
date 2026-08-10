@@ -49,7 +49,7 @@
     {
       "name": "Debug full stack",
       "configurations": ["Debug API", "Debug web app"],
-      "stopAll": true
+      "stopAll": false
     }
   ],
   "inputs": [
