@@ -125,7 +125,13 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .booking-month h4 { margin: 0 0 20px; font: 400 25px "Italiana", serif; text-transform: capitalize; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .calendar-weekday { padding: 0 0 9px; color: #777a70; font-size: 8px; text-align: center; text-transform: uppercase; letter-spacing: .12em; }
-.calendar-day { aspect-ratio: 1; display: grid; place-items: center; border: 1px solid #dad7cd; color: #4d554e; font-size: 11px; }
+.calendar-day { position: relative; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border: 1px solid #dad7cd; color: #4d554e; font-size: 11px; }
+.calendar-day time { position: relative; z-index: 1; }
+.calendar-day > i { position: absolute; inset: 0; }
+.calendar-day > i.is-reserved { background: #e7d9ba; }
+.calendar-day > i.is-booked { background: #657263; }
+.calendar-day .calendar-arrival { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.calendar-day .calendar-departure { clip-path: polygon(0 0, 100% 0, 0 100%); }
 .calendar-day.is-empty { border-color: transparent; }
 .calendar-day.is-reserved { border-color: #c6ad75; background: #e7d9ba; color: #4a3d21; }
 .calendar-day.is-booked { border-color: #6e7b6d; background: #657263; color: #fff; }

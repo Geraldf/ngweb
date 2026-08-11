@@ -42,9 +42,15 @@ function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange
         if (day === null) return <span className="calendar-day is-empty" aria-hidden="true" key={`empty-${index}`} />;
         const date = new Date(Date.UTC(year, monthIndex, day));
         const dateKey = isoDate(date);
-        const status = bookings.find((booking) => booking.arrival <= dateKey && dateKey < booking.departure)?.status;
-        const statusLabel = status === "booked" ? "Gebucht" : status === "reserved" ? "Reserviert" : "Verfügbar";
-        return <span className={`calendar-day${status ? ` is-${status}` : ""}`} role="gridcell" aria-label={`${fullDateFormatter.format(date)}: ${statusLabel}`} key={dateKey}>
+        const occupied = bookings.find((booking) => booking.arrival < dateKey && dateKey < booking.departure);
+        const arriving = bookings.find((booking) => booking.arrival === dateKey);
+        const departing = bookings.find((booking) => booking.departure === dateKey);
+        const statusLabel = occupied
+          ? occupied.status === "booked" ? "Gebucht" : "Reserviert"
+          : [departing && `Abreise (${departing.status === "booked" ? "gebucht" : "reserviert"})`, arriving && `Anreise (${arriving.status === "booked" ? "gebucht" : "reserviert"})`].filter(Boolean).join(", ") || "Verfügbar";
+        return <span className={`calendar-day${occupied ? ` is-${occupied.status}` : ""}`} role="gridcell" aria-label={`${fullDateFormatter.format(date)}: ${statusLabel}`} key={dateKey}>
+          {departing && <i className={`calendar-departure is-${departing.status}`} aria-hidden="true" />}
+          {arriving && <i className={`calendar-arrival is-${arriving.status}`} aria-hidden="true" />}
           <time dateTime={dateKey}>{day}</time>
         </span>;
       })}
