@@ -14,7 +14,57 @@ import "./styles.css";
 const links = ["Home", "La Casa", "Galerie", "Lage & Infos", "Preise & Kalender"];
 type MediaItem = { id: string; filename: string; title: string; mimeType: string; placement: "library" | "gallery"; order: number; createdAt: string };
 type GalleryPhoto = { id: string; src: string; title: string; position?: string; className?: string };
-type BookingRange = { arrival: string; departure: string };
+type BookingStatus = "requested" | "reserved" | "booked";
+type BookingRange = { arrival: string; departure: string; status: BookingStatus };
+type AdminBooking = BookingRange & { id: string; name: string; email: string; guests: number; message: string; createdAt: string };
+type BookingDebugEntry = { id: string; timestamp: string; operation: string; status: number | "network"; message: string };
+
+const dayNames = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+const monthFormatter = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" });
+const fullDateFormatter = new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+function isoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function bookingStatusLabel(status: BookingStatus) {
+  return status === "booked" ? "Gebucht" : status === "reserved" ? "Reserviert" : "Angefragt";
+}
+
+function highestPriorityBooking(bookings: BookingRange[]) {
+  return bookings.sort((a, b) => ["requested", "reserved", "booked"].indexOf(b.status) - ["requested", "reserved", "booked"].indexOf(a.status))[0];
+}
+
+function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange[] }) {
+  const year = month.getUTCFullYear();
+  const monthIndex = month.getUTCMonth();
+  const leadingDays = (month.getUTCDay() + 6) % 7;
+  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const cells = Array.from({ length: leadingDays + daysInMonth }, (_, index) => index < leadingDays ? null : index - leadingDays + 1);
+
+  return <article className="booking-month">
+    <h4>{monthFormatter.format(month)}</h4>
+    <div className="calendar-grid" role="grid" aria-label={monthFormatter.format(month)}>
+      {dayNames.map((day) => <span className="calendar-weekday" role="columnheader" key={day}>{day}</span>)}
+      {cells.map((day, index) => {
+        if (day === null) return <span className="calendar-day is-empty" aria-hidden="true" key={`empty-${index}`} />;
+        const date = new Date(Date.UTC(year, monthIndex, day));
+        const dateKey = isoDate(date);
+        const occupied = highestPriorityBooking(bookings.filter((booking) => booking.arrival < dateKey && dateKey < booking.departure));
+        const arriving = highestPriorityBooking(bookings.filter((booking) => booking.arrival === dateKey));
+        const departing = highestPriorityBooking(bookings.filter((booking) => booking.departure === dateKey));
+        const statusLabel = occupied
+          ? bookingStatusLabel(occupied.status)
+          : [departing && `Abreise (${bookingStatusLabel(departing.status).toLocaleLowerCase("de-DE")})`, arriving && `Anreise (${bookingStatusLabel(arriving.status).toLocaleLowerCase("de-DE")})`].filter(Boolean).join(", ") || "Verfügbar";
+        return <span className={`calendar-day${occupied ? ` is-${occupied.status}` : ""}`} role="gridcell" aria-label={`${fullDateFormatter.format(date)}: ${statusLabel}`} key={dateKey}>
+          {departing && <i className={`calendar-departure is-${departing.status}`} aria-hidden="true" />}
+          {arriving && <i className={`calendar-arrival is-${arriving.status}`} aria-hidden="true" />}
+          <time dateTime={dateKey}>{day}</time>
+        </span>;
+      })}
+    </div>
+  </article>;
+}
 
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
@@ -23,12 +73,22 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePhoto, setActivePhoto] = useState<number | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
+  const [managerSection, setManagerSection] = useState<"images" | "bookings">("images");
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [mediaError, setMediaError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [bookings, setBookings] = useState<BookingRange[]>([]);
   const [bookingStatus, setBookingStatus] = useState("");
   const [bookingBusy, setBookingBusy] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+  });
+  const [adminBookings, setAdminBookings] = useState<AdminBooking[]>([]);
+  const [adminError, setAdminError] = useState("");
+  const [adminBusy, setAdminBusy] = useState(false);
+  const [bookingDebug, setBookingDebug] = useState(false);
+  const [bookingDebugEntries, setBookingDebugEntries] = useState<BookingDebugEntry[]>([]);
 
   const gallery = useMemo<GalleryPhoto[]>(() =>
     media.filter((item) => item.placement === "gallery").sort((a, b) => a.order - b.order).map((item) => ({
@@ -37,6 +97,11 @@ function App() {
       title: item.title,
     })), [media]);
   const sortedMedia = useMemo(() => [...media].sort((a, b) => a.order - b.order), [media]);
+  const activeBookings = useMemo(() => {
+    const today = isoDate(new Date());
+    return bookings.filter((booking) => booking.departure > today);
+  }, [bookings]);
+  const visibleMonths = useMemo(() => [calendarMonth, new Date(Date.UTC(calendarMonth.getUTCFullYear(), calendarMonth.getUTCMonth() + 1, 1))], [calendarMonth]);
 
   const loadMedia = async () => {
     try {
@@ -49,9 +114,61 @@ function App() {
     }
   };
 
+  const loadPublicBookings = async () => {
+    try {
+      const response = await fetch(`${apiBase}/api/bookings`);
+      setBookings(response.ok ? await response.json() as BookingRange[] : []);
+    } catch {
+      setBookings([]);
+    }
+  };
+
+  const adminRequest = async (path = "", init: RequestInit = {}) => {
+    const operation = `${init.method ?? "GET"} /api/admin/bookings${path}`;
+    try {
+      const response = await fetch(`${apiBase}/api/admin/bookings${path}`, {
+        ...init,
+        headers: { "Content-Type": "application/json", ...init.headers },
+      });
+      if (bookingDebug) {
+        let message = response.ok ? "Anfrage erfolgreich" : response.statusText || "Anfrage fehlgeschlagen";
+        try {
+          const diagnostic = await response.clone().json() as { message?: string };
+          if (diagnostic.message) message = diagnostic.message;
+        } catch { /* Responses without JSON do not need additional diagnostics. */ }
+        const entry = { id: crypto.randomUUID(), timestamp: new Date().toLocaleTimeString("de-DE"), operation, status: response.status, message } satisfies BookingDebugEntry;
+        setBookingDebugEntries((current) => [entry, ...current].slice(0, 20));
+        console.info("[booking-debug]", entry);
+      }
+      return response;
+    } catch (error) {
+      if (bookingDebug) {
+        const entry = { id: crypto.randomUUID(), timestamp: new Date().toLocaleTimeString("de-DE"), operation, status: "network", message: error instanceof Error ? error.message : "Netzwerkfehler" } satisfies BookingDebugEntry;
+        setBookingDebugEntries((current) => [entry, ...current].slice(0, 20));
+        console.error("[booking-debug]", entry);
+      }
+      throw error;
+    }
+  };
+
+  const loadAdminBookings = async () => {
+    setAdminBusy(true);
+    setAdminError("");
+    try {
+      const response = await adminRequest();
+      const result = await response.json() as AdminBooking[] | { message?: string };
+      if (!response.ok) throw new Error("message" in result ? result.message : "Buchungen konnten nicht geladen werden.");
+      setAdminBookings((result as AdminBooking[]).sort((a, b) => a.arrival.localeCompare(b.arrival)));
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : "Buchungen konnten nicht geladen werden.");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
   useEffect(() => {
     void loadMedia();
-    void fetch(`${apiBase}/api/bookings`).then((response) => response.ok ? response.json() : []).then((items) => setBookings(items as BookingRange[]));
+    void loadPublicBookings();
   }, []);
 
   const submitBooking = async (event: FormEvent<HTMLFormElement>) => {
@@ -66,8 +183,7 @@ function App() {
       if (!response.ok) throw new Error(result.message ?? "Die Anfrage konnte nicht gesendet werden.");
       setBookingStatus("Vielen Dank! Wir haben Ihre Anfrage erhalten und melden uns persönlich bei Ihnen.");
       form.reset();
-      const ranges = await fetch(`${apiBase}/api/bookings`).then((reply) => reply.json()) as BookingRange[];
-      setBookings(ranges);
+      await loadPublicBookings();
     } catch (error) {
       setBookingStatus(error instanceof Error ? error.message : "Die Anfrage konnte nicht gesendet werden.");
     } finally {
@@ -153,6 +269,62 @@ function App() {
     else setMediaError("Das Bild konnte nicht gelöscht werden.");
   };
 
+  const openBookingManager = () => {
+    setManagerSection("bookings");
+    setManagerOpen(true);
+    void loadAdminBookings();
+  };
+
+  const createAdminBooking = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAdminBusy(true);
+    setAdminError("");
+    const form = event.currentTarget;
+    try {
+      const response = await adminRequest("", { method: "POST", body: JSON.stringify(Object.fromEntries(new FormData(form))) });
+      const result = await response.json() as AdminBooking | { message?: string };
+      if (!response.ok) throw new Error("message" in result ? result.message : "Buchung konnte nicht angelegt werden.");
+      form.reset();
+      await Promise.all([loadAdminBookings(), loadPublicBookings()]);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : "Buchung konnte nicht angelegt werden.");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
+  const updateAdminBooking = async (booking: AdminBooking) => {
+    setAdminBusy(true);
+    setAdminError("");
+    try {
+      const response = await adminRequest(`/${booking.id}`, { method: "PATCH", body: JSON.stringify(booking) });
+      const result = await response.json() as AdminBooking | { message?: string };
+      if (!response.ok) throw new Error("message" in result ? result.message : "Buchung konnte nicht gespeichert werden.");
+      setAdminBookings((current) => current.map((item) => item.id === booking.id ? result as AdminBooking : item));
+      await loadPublicBookings();
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : "Buchung konnte nicht gespeichert werden.");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
+  const deleteAdminBooking = async (booking: AdminBooking) => {
+    if (!window.confirm(`Buchung von „${booking.name}“ endgültig löschen?`)) return;
+    setAdminBusy(true);
+    setAdminError("");
+    try {
+      const response = await adminRequest(`/${booking.id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error((await response.json() as { message?: string }).message ?? "Buchung konnte nicht gelöscht werden.");
+      setAdminBookings((current) => current.filter((item) => item.id !== booking.id));
+      await loadPublicBookings();
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : "Buchung konnte nicht gelöscht werden.");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
   return (
     <>
       <header className="site-header">
@@ -165,7 +337,7 @@ function App() {
         </button>
       </header>
 
-      <button className="manage-button" onClick={() => setManagerOpen(true)} aria-label="Bilder verwalten">Bilder verwalten</button>
+      <button className="manage-button" onClick={() => setManagerOpen(true)} aria-label="Inhalte verwalten">Inhalte verwalten</button>
 
       <div className={`menu-panel ${menuOpen ? "is-open" : ""}`} aria-hidden={!menuOpen}>
         <button className="close-button" onClick={() => setMenuOpen(false)} aria-label="Menü schließen">Schließen <span>×</span></button>
@@ -306,12 +478,27 @@ function App() {
             <article><small>Juli – September</small><h3>€ 210</h3><p>pro Nacht · Hauptsaison</p></article>
           </div>
           <p className="price-note">Mindestaufenthalt 5 Nächte · Endreinigung € 120 · Bettwäsche und Handtücher inklusive · Alle Preise verstehen sich für das gesamte Haus.</p>
+          <div className="booking-calendar" aria-labelledby="calendar-title">
+            <div className="calendar-header">
+              <div><p className="eyebrow dark">Belegungskalender</p><h3 id="calendar-title">Verfügbarkeit<br /><em>auf einen Blick.</em></h3></div>
+              <div className="calendar-controls">
+                <button type="button" onClick={() => setCalendarMonth((month) => new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() - 1, 1)))} aria-label="Vorherige Monate">←</button>
+                <button type="button" onClick={() => { const now = new Date(); setCalendarMonth(new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1))); }}>Heute</button>
+                <button type="button" onClick={() => setCalendarMonth((month) => new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 1)))} aria-label="Nächste Monate">→</button>
+              </div>
+            </div>
+            <div className="calendar-months">{visibleMonths.map((month) => <BookingMonth month={month} bookings={activeBookings} key={month.toISOString()} />)}</div>
+            <div className="calendar-footer">
+              <div className="calendar-legend" aria-label="Kalenderlegende"><span><i className="is-requested" />Angefragt</span><span><i className="is-reserved" />Reserviert</span><span><i className="is-booked" />Gebucht</span><span><i />Verfügbar</span></div>
+              <button className="manage-bookings-button" type="button" onClick={openBookingManager}>Buchungen verwalten <span>→</span></button>
+            </div>
+          </div>
           <div className="booking-layout">
             <div className="availability-copy">
               <p className="eyebrow dark">Verfügbarkeit</p>
               <h3>Ihre Auszeit<br /><em>anfragen.</em></h3>
-              <p>Bereits angefragte Zeiträume werden bei der Auswahl automatisch geprüft. Ihre Reservierung ist erst nach unserer persönlichen Bestätigung verbindlich.</p>
-              {bookings.length > 0 && <div className="occupied-dates"><strong>Aktuell nicht verfügbar</strong>{bookings.map((range) => <span key={`${range.arrival}-${range.departure}`}>{new Date(`${range.arrival}T00:00:00`).toLocaleDateString("de-DE")} – {new Date(`${range.departure}T00:00:00`).toLocaleDateString("de-DE")}</span>)}</div>}
+              <p>Reservierte und gebuchte Zeiträume werden bei der Auswahl automatisch geprüft. Mehrere unverbindliche Anfragen für denselben Zeitraum sind möglich.</p>
+              {activeBookings.length > 0 && <div className="occupied-dates"><strong>Aktuelle Belegung &amp; Anfragen</strong>{activeBookings.map((range, index) => <span key={`${range.arrival}-${range.departure}-${index}`}><i className={`is-${range.status}`} />{new Date(`${range.arrival}T00:00:00`).toLocaleDateString("de-DE")} – {new Date(`${range.departure}T00:00:00`).toLocaleDateString("de-DE")} · {bookingStatusLabel(range.status)}</span>)}</div>}
             </div>
             <form className="booking-form" onSubmit={submitBooking}>
               <div className="form-row"><label>Anreise<input required name="arrival" type="date" min={new Date().toISOString().slice(0, 10)} /></label><label>Abreise<input required name="departure" type="date" min={new Date().toISOString().slice(0, 10)} /></label></div>
@@ -334,12 +521,16 @@ function App() {
         <button className="lightbox-arrow" onClick={(e) => { e.stopPropagation(); setActivePhoto((activePhoto + 1) % gallery.length); }} aria-label="Nächstes Bild">→</button>
       </div>}
 
-      {managerOpen && <div className="media-manager" role="dialog" aria-modal="true" aria-labelledby="media-title">
+      {managerOpen && <div className="media-manager" role="dialog" aria-modal="true" aria-labelledby="manager-title">
         <div className="manager-header">
-          <div><p className="eyebrow">Website-Inhalte</p><h2 id="media-title">Bilder verwalten</h2></div>
-          <button className="manager-close" onClick={() => setManagerOpen(false)} aria-label="Bildverwaltung schließen">×</button>
+          <div><p className="eyebrow">Website-Inhalte</p><h2 id="manager-title">Inhalte verwalten</h2></div>
+          <button className="manager-close" onClick={() => setManagerOpen(false)} aria-label="Verwaltung schließen">×</button>
         </div>
-        <div className="manager-toolbar">
+        <nav className="manager-tabs" aria-label="Verwaltungsbereiche">
+          <button className={managerSection === "images" ? "is-active" : ""} onClick={() => setManagerSection("images")}>Bilder</button>
+          <button className={managerSection === "bookings" ? "is-active" : ""} onClick={() => { setManagerSection("bookings"); void loadAdminBookings(); }}>Buchungen</button>
+        </nav>
+        {managerSection === "images" && <><div className="manager-toolbar">
           <label className={`upload-button ${uploading ? "is-busy" : ""}`}>
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={uploadImages} disabled={uploading} />
             {uploading ? "Wird hochgeladen …" : "＋ Bilder hochladen"}
@@ -361,7 +552,47 @@ function App() {
               <button disabled={index === sortedMedia.length - 1} onClick={() => void moveMedia(item, 1)} aria-label={`${item.title} nach unten verschieben`}>↓</button>
               <button className="delete-button" onClick={() => void deleteMedia(item)}>Löschen</button>
             </div>
-          </article>)}</div>}
+          </article>)}</div>}</>}
+        {managerSection === "bookings" && <div className="booking-manager">
+          <div className="booking-debug-toggle">
+            <label><input type="checkbox" checked={bookingDebug} onChange={(event) => setBookingDebug(event.target.checked)} /> Debug-Modus</label>
+            <span>Zeigt technische Details ohne Gästedaten.</span>
+          </div>
+          {bookingDebug && <aside className="booking-debug-panel" aria-label="Buchungsdiagnose">
+            <div className="booking-debug-heading"><strong>Diagnose</strong><button type="button" onClick={() => setBookingDebugEntries([])}>Leeren</button></div>
+            <dl><div><dt>API</dt><dd>{apiBase || window.location.origin}</dd></div></dl>
+            {bookingDebugEntries.length === 0 ? <p>Noch keine Verwaltungsanfrage ausgeführt.</p> : <ol>{bookingDebugEntries.map((entry) => <li key={entry.id} className={typeof entry.status === "number" && entry.status >= 200 && entry.status < 300 ? "is-success" : "is-error"}>
+              <time>{entry.timestamp}</time><code>{entry.operation}</code><b>{entry.status}</b><span>{entry.message}</span>
+            </li>)}</ol>}
+          </aside>}
+          <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Wird geladen …" : "Buchungen neu laden"}</button>
+          {adminError && <p className="manager-error" role="alert">{adminError}</p>}
+          <form className="booking-create" onSubmit={createAdminBooking}>
+            <h3>Neue Buchung hinzufügen</h3>
+            <p className="booking-create-hint">Tragen Sie hier die Buchungsdaten ein. Bestehende Buchungen müssen vorher nicht geladen werden.</p>
+            <label>Anreise<input type="date" name="arrival" required /></label>
+            <label>Abreise<input type="date" name="departure" required /></label>
+            <label>Status<select name="status"><option value="requested">Angefragt</option><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
+            <label>Name<input name="name" required /></label>
+            <label>E-Mail<input name="email" type="email" required /></label>
+            <label>Gäste<input name="guests" type="number" min="1" max="4" defaultValue="2" required /></label>
+            <label className="booking-message-field">Nachricht<textarea name="message" rows={2} /></label>
+            <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird angelegt …" : "＋ Buchung hinzufügen"}</button>
+          </form>
+          {adminBookings.length > 0 ? <div className="admin-booking-list">{adminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
+              <div className="admin-booking-heading"><strong>{booking.name}</strong><span className={`booking-badge is-${booking.status}`}>{bookingStatusLabel(booking.status)}</span></div>
+              <div className="admin-booking-fields">
+                <label>Anreise<input type="date" value={booking.arrival} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, arrival: event.target.value } : item))} /></label>
+                <label>Abreise<input type="date" value={booking.departure} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, departure: event.target.value } : item))} /></label>
+                <label>Status<select value={booking.status} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, status: event.target.value as BookingStatus } : item))}><option value="requested">Angefragt</option><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
+                <label>Name<input value={booking.name} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, name: event.target.value } : item))} /></label>
+                <label>E-Mail<input type="email" value={booking.email} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, email: event.target.value } : item))} /></label>
+                <label>Gäste<input type="number" min="1" max="4" value={booking.guests} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, guests: Number(event.target.value) } : item))} /></label>
+                <label className="booking-message-field">Nachricht<textarea rows={2} value={booking.message} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, message: event.target.value } : item))} /></label>
+              </div>
+              <div className="admin-booking-actions"><button disabled={adminBusy} onClick={() => void updateAdminBooking(booking)}>Speichern</button><button className="delete-button" disabled={adminBusy} onClick={() => void deleteAdminBooking(booking)}>Löschen</button></div>
+            </article>)}</div> : <div className="manager-empty"><strong>Noch keine Buchungen</strong><span>Legen Sie die erste Buchung über das Formular an.</span></div>}
+        </div>}
       </div>}
 
       <footer><a className="brand footer-brand" href="/#home"><span className="brand-mark">CB</span><span className="brand-copy"><strong>Casa Baia</strong><small>Sant’Anna · Sardegna</small></span></a><p>© 2026 Casa Baia Sant’Anna</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; Datenschutz</p></footer>
