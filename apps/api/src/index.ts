@@ -19,7 +19,7 @@ type Booking = {
   id: string;
   arrival: string;
   departure: string;
-  status?: "reserved" | "booked";
+  status?: "requested" | "reserved" | "booked";
   name: string;
   email: string;
   guests: number;
@@ -81,7 +81,7 @@ function bookingFields(body: Record<string, unknown>): BookingFields | undefined
   const start = new Date(`${arrival}T00:00:00Z`);
   const end = new Date(`${departure}T00:00:00Z`);
   const guests = Number(body.guests);
-  const status = body.status === "booked" ? "booked" : "reserved";
+  const status = body.status === "booked" || body.status === "reserved" ? body.status : "requested";
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start ||
       typeof body.name !== "string" || !body.name.trim() || typeof body.email !== "string" || !body.email.includes("@") ||
       !Number.isInteger(guests) || guests < 1 || guests > 4) return undefined;
@@ -97,7 +97,11 @@ function bookingFields(body: Record<string, unknown>): BookingFields | undefined
 }
 
 function overlapsBooking(bookings: Booking[], fields: BookingFields, ignoredId?: string) {
-  return bookings.some((booking) => booking.id !== ignoredId && fields.arrival < booking.departure && fields.departure > booking.arrival);
+  return bookings.some((booking) => booking.id !== ignoredId && booking.status !== "requested" && fields.arrival < booking.departure && fields.departure > booking.arrival);
+}
+
+function normalizedStatus(status: Booking["status"]) {
+  return status === "booked" || status === "requested" ? status : "reserved";
 }
 
 app.get("/api/health", (_request, response) => {
@@ -118,7 +122,7 @@ app.get("/api/bookings", async (_request, response, next) => {
     response.json(bookings.map(({ arrival, departure, status }) => ({
       arrival,
       departure,
-      status: status === "booked" ? "booked" : "reserved",
+      status: normalizedStatus(status),
     })));
   } catch (error) {
     next(error);
@@ -127,7 +131,7 @@ app.get("/api/bookings", async (_request, response, next) => {
 
 app.post("/api/bookings", async (request, response, next) => {
   try {
-    const fields = bookingFields({ ...(request.body as Record<string, unknown>), status: "reserved" });
+    const fields = bookingFields({ ...(request.body as Record<string, unknown>), status: "requested" });
     if (!fields) {
       response.status(400).json({ message: "Bitte prüfen Sie Ihre Reisedaten und Kontaktdaten." });
       return;
@@ -152,7 +156,7 @@ app.post("/api/bookings", async (request, response, next) => {
 app.get("/api/admin/bookings", async (_request, response, next) => {
   try {
     const bookings = await readBookings();
-    response.json(bookings.map((booking) => ({ ...booking, status: booking.status === "booked" ? "booked" : "reserved" })));
+    response.json(bookings.map((booking) => ({ ...booking, status: normalizedStatus(booking.status) })));
   } catch (error) {
     next(error);
   }

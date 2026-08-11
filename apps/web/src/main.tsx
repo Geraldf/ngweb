@@ -14,7 +14,7 @@ import "./styles.css";
 const links = ["Home", "La Casa", "Galerie", "Lage & Infos", "Preise & Kalender"];
 type MediaItem = { id: string; filename: string; title: string; mimeType: string; placement: "library" | "gallery"; order: number; createdAt: string };
 type GalleryPhoto = { id: string; src: string; title: string; position?: string; className?: string };
-type BookingStatus = "reserved" | "booked";
+type BookingStatus = "requested" | "reserved" | "booked";
 type BookingRange = { arrival: string; departure: string; status: BookingStatus };
 type AdminBooking = BookingRange & { id: string; name: string; email: string; guests: number; message: string; createdAt: string };
 type BookingDebugEntry = { id: string; timestamp: string; operation: string; status: number | "network"; message: string };
@@ -25,6 +25,14 @@ const fullDateFormatter = new Intl.DateTimeFormat("de-DE", { day: "numeric", mon
 
 function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function bookingStatusLabel(status: BookingStatus) {
+  return status === "booked" ? "Gebucht" : status === "reserved" ? "Reserviert" : "Angefragt";
+}
+
+function highestPriorityBooking(bookings: BookingRange[]) {
+  return bookings.sort((a, b) => ["requested", "reserved", "booked"].indexOf(b.status) - ["requested", "reserved", "booked"].indexOf(a.status))[0];
 }
 
 function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange[] }) {
@@ -42,12 +50,12 @@ function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange
         if (day === null) return <span className="calendar-day is-empty" aria-hidden="true" key={`empty-${index}`} />;
         const date = new Date(Date.UTC(year, monthIndex, day));
         const dateKey = isoDate(date);
-        const occupied = bookings.find((booking) => booking.arrival < dateKey && dateKey < booking.departure);
-        const arriving = bookings.find((booking) => booking.arrival === dateKey);
-        const departing = bookings.find((booking) => booking.departure === dateKey);
+        const occupied = highestPriorityBooking(bookings.filter((booking) => booking.arrival < dateKey && dateKey < booking.departure));
+        const arriving = highestPriorityBooking(bookings.filter((booking) => booking.arrival === dateKey));
+        const departing = highestPriorityBooking(bookings.filter((booking) => booking.departure === dateKey));
         const statusLabel = occupied
-          ? occupied.status === "booked" ? "Gebucht" : "Reserviert"
-          : [departing && `Abreise (${departing.status === "booked" ? "gebucht" : "reserviert"})`, arriving && `Anreise (${arriving.status === "booked" ? "gebucht" : "reserviert"})`].filter(Boolean).join(", ") || "Verfügbar";
+          ? bookingStatusLabel(occupied.status)
+          : [departing && `Abreise (${bookingStatusLabel(departing.status).toLocaleLowerCase("de-DE")})`, arriving && `Anreise (${bookingStatusLabel(arriving.status).toLocaleLowerCase("de-DE")})`].filter(Boolean).join(", ") || "Verfügbar";
         return <span className={`calendar-day${occupied ? ` is-${occupied.status}` : ""}`} role="gridcell" aria-label={`${fullDateFormatter.format(date)}: ${statusLabel}`} key={dateKey}>
           {departing && <i className={`calendar-departure is-${departing.status}`} aria-hidden="true" />}
           {arriving && <i className={`calendar-arrival is-${arriving.status}`} aria-hidden="true" />}
@@ -91,7 +99,7 @@ function App() {
   const sortedMedia = useMemo(() => [...media].sort((a, b) => a.order - b.order), [media]);
   const activeBookings = useMemo(() => {
     const today = isoDate(new Date());
-    return bookings.filter((booking) => booking.departure > today && (booking.status === "reserved" || booking.status === "booked"));
+    return bookings.filter((booking) => booking.departure > today);
   }, [bookings]);
   const visibleMonths = useMemo(() => [calendarMonth, new Date(Date.UTC(calendarMonth.getUTCFullYear(), calendarMonth.getUTCMonth() + 1, 1))], [calendarMonth]);
 
@@ -481,7 +489,7 @@ function App() {
             </div>
             <div className="calendar-months">{visibleMonths.map((month) => <BookingMonth month={month} bookings={activeBookings} key={month.toISOString()} />)}</div>
             <div className="calendar-footer">
-              <div className="calendar-legend" aria-label="Kalenderlegende"><span><i className="is-reserved" />Reserviert</span><span><i className="is-booked" />Gebucht</span><span><i />Verfügbar</span></div>
+              <div className="calendar-legend" aria-label="Kalenderlegende"><span><i className="is-requested" />Angefragt</span><span><i className="is-reserved" />Reserviert</span><span><i className="is-booked" />Gebucht</span><span><i />Verfügbar</span></div>
               <button className="manage-bookings-button" type="button" onClick={openBookingManager}>Buchungen verwalten <span>→</span></button>
             </div>
           </div>
@@ -489,8 +497,8 @@ function App() {
             <div className="availability-copy">
               <p className="eyebrow dark">Verfügbarkeit</p>
               <h3>Ihre Auszeit<br /><em>anfragen.</em></h3>
-              <p>Bereits angefragte Zeiträume werden bei der Auswahl automatisch geprüft. Ihre Reservierung ist erst nach unserer persönlichen Bestätigung verbindlich.</p>
-              {activeBookings.length > 0 && <div className="occupied-dates"><strong>Aktuell nicht verfügbar</strong>{activeBookings.map((range) => <span key={`${range.arrival}-${range.departure}`}><i className={`is-${range.status}`} />{new Date(`${range.arrival}T00:00:00`).toLocaleDateString("de-DE")} – {new Date(`${range.departure}T00:00:00`).toLocaleDateString("de-DE")} · {range.status === "booked" ? "Gebucht" : "Reserviert"}</span>)}</div>}
+              <p>Reservierte und gebuchte Zeiträume werden bei der Auswahl automatisch geprüft. Mehrere unverbindliche Anfragen für denselben Zeitraum sind möglich.</p>
+              {activeBookings.length > 0 && <div className="occupied-dates"><strong>Aktuelle Belegung &amp; Anfragen</strong>{activeBookings.map((range, index) => <span key={`${range.arrival}-${range.departure}-${index}`}><i className={`is-${range.status}`} />{new Date(`${range.arrival}T00:00:00`).toLocaleDateString("de-DE")} – {new Date(`${range.departure}T00:00:00`).toLocaleDateString("de-DE")} · {bookingStatusLabel(range.status)}</span>)}</div>}
             </div>
             <form className="booking-form" onSubmit={submitBooking}>
               <div className="form-row"><label>Anreise<input required name="arrival" type="date" min={new Date().toISOString().slice(0, 10)} /></label><label>Abreise<input required name="departure" type="date" min={new Date().toISOString().slice(0, 10)} /></label></div>
@@ -564,7 +572,7 @@ function App() {
             <p className="booking-create-hint">Tragen Sie hier die Buchungsdaten ein. Bestehende Buchungen müssen vorher nicht geladen werden.</p>
             <label>Anreise<input type="date" name="arrival" required /></label>
             <label>Abreise<input type="date" name="departure" required /></label>
-            <label>Status<select name="status"><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
+            <label>Status<select name="status"><option value="requested">Angefragt</option><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
             <label>Name<input name="name" required /></label>
             <label>E-Mail<input name="email" type="email" required /></label>
             <label>Gäste<input name="guests" type="number" min="1" max="4" defaultValue="2" required /></label>
@@ -572,11 +580,11 @@ function App() {
             <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird angelegt …" : "＋ Buchung hinzufügen"}</button>
           </form>
           {adminBookings.length > 0 ? <div className="admin-booking-list">{adminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
-              <div className="admin-booking-heading"><strong>{booking.name}</strong><span className={`booking-badge is-${booking.status}`}>{booking.status === "booked" ? "Gebucht" : "Reserviert"}</span></div>
+              <div className="admin-booking-heading"><strong>{booking.name}</strong><span className={`booking-badge is-${booking.status}`}>{bookingStatusLabel(booking.status)}</span></div>
               <div className="admin-booking-fields">
                 <label>Anreise<input type="date" value={booking.arrival} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, arrival: event.target.value } : item))} /></label>
                 <label>Abreise<input type="date" value={booking.departure} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, departure: event.target.value } : item))} /></label>
-                <label>Status<select value={booking.status} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, status: event.target.value as BookingStatus } : item))}><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
+                <label>Status<select value={booking.status} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, status: event.target.value as BookingStatus } : item))}><option value="requested">Angefragt</option><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
                 <label>Name<input value={booking.name} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, name: event.target.value } : item))} /></label>
                 <label>E-Mail<input type="email" value={booking.email} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, email: event.target.value } : item))} /></label>
                 <label>Gäste<input type="number" min="1" max="4" value={booking.guests} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, guests: Number(event.target.value) } : item))} /></label>

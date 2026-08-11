@@ -128,17 +128,20 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .calendar-day { position: relative; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border: 1px solid #dad7cd; color: #4d554e; font-size: 11px; }
 .calendar-day time { position: relative; z-index: 1; }
 .calendar-day > i { position: absolute; inset: 0; }
+.calendar-day > i.is-requested { background: #c8dce3; }
 .calendar-day > i.is-reserved { background: #e7d9ba; }
 .calendar-day > i.is-booked { background: #657263; }
 .calendar-day .calendar-arrival { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
 .calendar-day .calendar-departure { clip-path: polygon(0 0, 100% 0, 0 100%); }
 .calendar-day.is-empty { border-color: transparent; }
+.calendar-day.is-requested { border-color: #8eafb9; background: #c8dce3; color: #29434b; }
 .calendar-day.is-reserved { border-color: #c6ad75; background: #e7d9ba; color: #4a3d21; }
 .calendar-day.is-booked { border-color: #6e7b6d; background: #657263; color: #fff; }
 .calendar-footer { margin-top: 30px; padding-top: 22px; border-top: 1px solid #d3d0c6; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
 .calendar-legend { display: flex; gap: 28px; color: #666a61; font-size: 9px; text-transform: uppercase; letter-spacing: .12em; }
 .calendar-legend span, .occupied-dates span { display: flex; align-items: center; gap: 8px; }
 .calendar-legend i, .occupied-dates i { width: 11px; height: 11px; flex: 0 0 auto; border: 1px solid #c9c7bd; background: #f7f4ed; }
+.calendar-legend i.is-requested, .occupied-dates i.is-requested { border-color: #8eafb9; background: #c8dce3; }
 .calendar-legend i.is-reserved, .occupied-dates i.is-reserved { border-color: #c6ad75; background: #e7d9ba; }
 .calendar-legend i.is-booked, .occupied-dates i.is-booked { border-color: #6e7b6d; background: #657263; }
 .manage-bookings-button { padding: 13px 16px; border: 1px solid #263127; background: transparent; color: #263127; cursor: pointer; font-size: 9px; text-transform: uppercase; letter-spacing: .12em; }
@@ -234,6 +237,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .admin-booking-heading strong { font: 400 24px "Italiana", serif; }
 .booking-badge { padding: 6px 9px; font-size: 8px; text-transform: uppercase; letter-spacing: .12em; }
 .booking-badge.is-reserved { background: #e7d9ba; color: #4a3d21; }
+.booking-badge.is-requested { background: #c8dce3; color: #29434b; }
 .booking-badge.is-booked { background: #657263; color: white; }
 .admin-booking-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .admin-booking-actions { margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px; }
