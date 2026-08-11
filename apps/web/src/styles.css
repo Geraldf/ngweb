@@ -23,7 +23,7 @@ button { font: inherit; }
 .hero-content { position: absolute; left: 10vw; top: 50%; transform: translateY(-42%); }
 .eyebrow { margin: 0 0 25px; font-size: 10px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; }
 .eyebrow::before { content: ""; width: 36px; height: 1px; display: inline-block; background: currentColor; vertical-align: middle; margin-right: 14px; }
-.hero h1 { margin: 0; font-family: "Italiana", serif; font-size: clamp(76px, 10vw, 160px); line-height: .82; font-weight: 400; letter-spacing: -.035em; }
+.hero h1 { margin: 0; color: #f7f3e9; font-family: "Italiana", serif; font-size: clamp(76px, 10vw, 160px); line-height: .82; font-weight: 400; letter-spacing: -.035em; text-shadow: 0 2px 22px rgba(28,35,28,.28); }
 .round-link { width: 126px; height: 126px; margin: 55px 0 0 49vw; border: 1px solid rgba(255,255,255,.65); border-radius: 50%; display: grid; place-content: center; gap: 13px; text-align: center; text-transform: uppercase; font-size: 9px; letter-spacing: .22em; transition: background .3s, color .3s; }
 .round-link:hover { background: white; color: #263127; }
 .round-link b { font-size: 20px; font-weight: 300; }
