@@ -70,6 +70,7 @@ const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
 function App() {
   const isImpressum = window.location.pathname.replace(/\/$/, "") === "/impressum";
+  const isDatenschutz = window.location.pathname.replace(/\/$/, "") === "/datenschutz";
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePhoto, setActivePhoto] = useState<number | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
@@ -366,6 +367,51 @@ function App() {
             </div>
           </div>
         </section>
+      </main> : isDatenschutz ? <main className="legal-page">
+        <section className="legal-hero">
+          <p className="eyebrow">Informationen nach Art. 13 DSGVO</p>
+          <h1>Datenschutz</h1>
+        </section>
+        <section className="legal-content">
+          <div className="section-number">01 <span /></div>
+          <div className="legal-details">
+            <h2>Ihre Daten.<br /><em>Ihre Rechte.</em></h2>
+            <div className="legal-copy">
+              <p>Wir behandeln Ihre personenbezogenen Daten vertraulich und entsprechend den gesetzlichen Datenschutzvorschriften.</p>
+
+              <h3>1. Verantwortliche</h3>
+              <p>Verantwortlich für die Datenverarbeitung auf dieser Website sind:</p>
+              <address>Susanne Adrian-Fuchs &amp; Gerald Fuchs<br />Chemnitzer Strasse 8<br />78658 Zimmern o.R.<br />Deutschland</address>
+              <p>Telefon: <a href="tel:+4974134898934">+49 (0) 741 34898934</a><br />E-Mail: <a href="mailto:info@casa-baia-sant-anna.com">info@casa-baia-sant-anna.com</a></p>
+
+              <hr />
+              <h3>2. Aufruf der Website und Server-Protokolle</h3>
+              <p>Beim Aufruf der Website übermittelt Ihr Browser technisch erforderliche Daten an den Webserver. Dazu können insbesondere IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Seite oder Datei, zuvor besuchte Seite, Browsertyp und Betriebssystem gehören. Die Verarbeitung ist erforderlich, um die Website sicher und zuverlässig bereitzustellen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO; unser berechtigtes Interesse liegt im sicheren und störungsfreien Betrieb unseres Internetauftritts.</p>
+              <p>Unser Hosting-Dienstleister verarbeitet diese Daten in unserem Auftrag. Protokolldaten werden gelöscht, sobald sie für die genannten Zwecke nicht mehr erforderlich sind, sofern keine gesetzliche Aufbewahrungspflicht oder ein sicherheitsrelevanter Vorfall eine längere Speicherung erfordert.</p>
+
+              <h3>3. Buchungsanfragen</h3>
+              <p>Wenn Sie eine Buchungsanfrage senden, verarbeiten wir die von Ihnen eingegebenen Daten: An- und Abreisedatum, Name, E-Mail-Adresse, Anzahl der Gäste sowie Ihre optionale Nachricht. Wir verwenden diese Angaben, um die Verfügbarkeit zu prüfen, Ihre Anfrage zu bearbeiten und mit Ihnen Kontakt aufzunehmen.</p>
+              <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (vorvertragliche Maßnahmen und, bei anschließender Buchung, Vertragserfüllung). Nicht zum Vertrag führende Anfragen löschen wir, sobald die Bearbeitung abgeschlossen ist und keine berechtigten Interessen oder gesetzlichen Pflichten entgegenstehen. Daten zu zustande gekommenen Buchungen bewahren wir im Rahmen der geltenden handels- und steuerrechtlichen Pflichten auf; Rechtsgrundlage hierfür ist Art. 6 Abs. 1 lit. c DSGVO.</p>
+              <p>Im öffentlich sichtbaren Belegungskalender erscheinen ausschließlich Reisezeiträume und deren Status. Namen, E-Mail-Adressen, Gästezahlen und Nachrichten werden dort nicht veröffentlicht.</p>
+
+              <h3>4. Kontakt per E-Mail oder Telefon</h3>
+              <p>Wenn Sie uns per E-Mail oder Telefon kontaktieren, verarbeiten wir Ihre Angaben zur Bearbeitung Ihres Anliegens. Bezieht sich die Anfrage auf eine mögliche oder bestehende Buchung, ist Art. 6 Abs. 1 lit. b DSGVO die Rechtsgrundlage. Bei sonstigen Anliegen erfolgt die Verarbeitung auf Grundlage unseres berechtigten Interesses an der Beantwortung Ihrer Anfrage gemäß Art. 6 Abs. 1 lit. f DSGVO. Die Daten werden gelöscht, sobald das Anliegen abschließend geklärt ist und keine gesetzlichen Aufbewahrungspflichten entgegenstehen.</p>
+
+              <h3>5. Cookies, Analyse und externe Inhalte</h3>
+              <p>Diese Website setzt keine Cookies ein und verwendet keine Analyse-, Marketing- oder Trackingdienste. Schriften und Bilder werden ohne Verbindung zu externen Schrift- oder Bilddiensten bereitgestellt.</p>
+
+              <h3>6. Empfänger und Übermittlung</h3>
+              <p>Personenbezogene Daten erhalten nur die Stellen, die sie zur Erfüllung der genannten Zwecke benötigen. Neben uns kann dies insbesondere unser Hosting-Dienstleister als Auftragsverarbeiter sein. Eine Übermittlung in ein Drittland außerhalb der Europäischen Union oder des Europäischen Wirtschaftsraums ist durch die Website nicht vorgesehen.</p>
+
+              <h3>7. Ihre Rechte</h3>
+              <p>Sie haben im Rahmen der gesetzlichen Voraussetzungen das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16 DSGVO), Löschung (Art. 17 DSGVO), Einschränkung der Verarbeitung (Art. 18 DSGVO), Datenübertragbarkeit (Art. 20 DSGVO) und Widerspruch gegen Verarbeitungen auf Grundlage von Art. 6 Abs. 1 lit. e oder f DSGVO (Art. 21 DSGVO).</p>
+              <p>Zur Ausübung Ihrer Rechte genügt eine Nachricht an <a href="mailto:info@casa-baia-sant-anna.com">info@casa-baia-sant-anna.com</a>. Sie haben außerdem das Recht, sich bei einer Datenschutzaufsichtsbehörde zu beschweren, insbesondere in dem Mitgliedstaat Ihres Aufenthaltsorts, Ihres Arbeitsplatzes oder des Orts des mutmaßlichen Verstoßes.</p>
+
+              <h3>8. Stand und Änderungen</h3>
+              <p>Stand dieser Datenschutzerklärung: August 2026. Wir passen sie an, wenn sich die Website, unsere Verarbeitung oder die rechtlichen Anforderungen ändern.</p>
+            </div>
+          </div>
+        </section>
       </main> : <main id="home">
         <section className="hero" style={{ backgroundImage: `url(${heroImage})` }}>
           <div className="hero-shade" />
@@ -505,6 +551,7 @@ function App() {
               <div className="form-row"><label>Name<input required name="name" autoComplete="name" /></label><label>E-Mail<input required name="email" type="email" autoComplete="email" /></label></div>
               <label>Gäste<select name="guests" defaultValue="2"><option value="1">1 Person</option><option value="2">2 Personen</option><option value="3">3 Personen</option><option value="4">4 Personen</option></select></label>
               <label>Nachricht (optional)<textarea name="message" rows={4} placeholder="Was dürfen wir über Ihre Reise wissen?" /></label>
+              <p className="form-privacy-note">Hinweise zur Verarbeitung Ihrer Angaben finden Sie in unserer <a href="/datenschutz">Datenschutzerklärung</a>.</p>
               <button disabled={bookingBusy} type="submit">{bookingBusy ? "Wird gesendet …" : "Verfügbarkeit prüfen & anfragen"}<span>→</span></button>
               {bookingStatus && <p className="booking-status" role="status">{bookingStatus}</p>}
             </form>
@@ -595,7 +642,7 @@ function App() {
         </div>}
       </div>}
 
-      <footer><a className="brand footer-brand" href="/#home"><span className="brand-mark">CB</span><span className="brand-copy"><strong>Casa Baia</strong><small>Sant’Anna · Sardegna</small></span></a><p>© 2026 Casa Baia Sant’Anna</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; Datenschutz</p></footer>
+      <footer><a className="brand footer-brand" href="/#home"><span className="brand-mark">CB</span><span className="brand-copy"><strong>Casa Baia</strong><small>Sant’Anna · Sardegna</small></span></a><p>© 2026 Casa Baia Sant’Anna</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; <a href="/datenschutz">Datenschutz</a></p></footer>
     </>
   );
 }

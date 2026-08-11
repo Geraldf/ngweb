@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Italiana&display=swap');
-
 :root { font-family: "DM Sans", sans-serif; color: #263127; background: #f3f0e8; font-synthesis: none; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -157,6 +155,8 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .booking-form label { color: #6b6f66; font-size: 9px; text-transform: uppercase; letter-spacing: .15em; }
 .booking-form input, .booking-form select, .booking-form textarea { width: 100%; margin-top: 8px; padding: 13px 12px; border: 1px solid #bbb9af; border-radius: 0; background: #f7f4ed; color: #263127; font: 13px "DM Sans", sans-serif; }
 .booking-form textarea { resize: vertical; }
+.form-privacy-note { margin: -3px 0 0; color: #6b6f66; font-size: 10px; line-height: 1.6; }
+.form-privacy-note a { color: #263127; text-decoration: underline; text-underline-offset: 3px; }
 .booking-form button { padding: 17px 20px; border: 0; background: #263127; color: white; display: flex; justify-content: space-between; cursor: pointer; text-transform: uppercase; letter-spacing: .15em; font-size: 9px; }
 .booking-form button:disabled { opacity: .65; }
 .booking-status { margin: 0; color: #3f5742; font-size: 12px; line-height: 1.6; }
