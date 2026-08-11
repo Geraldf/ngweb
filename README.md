@@ -62,4 +62,4 @@ The API accepts JPEG, PNG, WebP, and GIF files up to 10 MB. Image files and thei
 
 ## Booking management
 
-Set `BOOKING_ADMIN_TOKEN` to a long random value before starting the API. Open **Inhalte verwalten**, select **Buchungen**, and enter that token to create, view, edit, confirm, or delete bookings. The token is kept only in the current browser session and guest contact details are available only through the authenticated administration endpoints.
+Open **Inhalte verwalten** and select **Buchungen** to create, view, edit, confirm, or delete bookings. No administration key is required.

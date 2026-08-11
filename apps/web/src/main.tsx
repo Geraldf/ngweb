@@ -70,8 +70,6 @@ function App() {
     const now = new Date();
     return new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
   });
-  const [adminToken, setAdminToken] = useState("");
-  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   const [adminBookings, setAdminBookings] = useState<AdminBooking[]>([]);
   const [adminError, setAdminError] = useState("");
   const [adminBusy, setAdminBusy] = useState(false);
@@ -116,7 +114,7 @@ function App() {
     try {
       const response = await fetch(`${apiBase}/api/admin/bookings${path}`, {
         ...init,
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}`, ...init.headers },
+        headers: { "Content-Type": "application/json", ...init.headers },
       });
       if (bookingDebug) {
         let message = response.ok ? "Anfrage erfolgreich" : response.statusText || "Anfrage fehlgeschlagen";
@@ -147,9 +145,7 @@ function App() {
       const result = await response.json() as AdminBooking[] | { message?: string };
       if (!response.ok) throw new Error("message" in result ? result.message : "Buchungen konnten nicht geladen werden.");
       setAdminBookings((result as AdminBooking[]).sort((a, b) => a.arrival.localeCompare(b.arrival)));
-      setAdminAuthenticated(true);
     } catch (error) {
-      setAdminAuthenticated(false);
       setAdminError(error instanceof Error ? error.message : "Buchungen konnten nicht geladen werden.");
     } finally {
       setAdminBusy(false);
@@ -262,6 +258,7 @@ function App() {
   const openBookingManager = () => {
     setManagerSection("bookings");
     setManagerOpen(true);
+    void loadAdminBookings();
   };
 
   const createAdminBooking = async (event: FormEvent<HTMLFormElement>) => {
@@ -517,7 +514,7 @@ function App() {
         </div>
         <nav className="manager-tabs" aria-label="Verwaltungsbereiche">
           <button className={managerSection === "images" ? "is-active" : ""} onClick={() => setManagerSection("images")}>Bilder</button>
-          <button className={managerSection === "bookings" ? "is-active" : ""} onClick={() => setManagerSection("bookings")}>Buchungen</button>
+          <button className={managerSection === "bookings" ? "is-active" : ""} onClick={() => { setManagerSection("bookings"); void loadAdminBookings(); }}>Buchungen</button>
         </nav>
         {managerSection === "images" && <><div className="manager-toolbar">
           <label className={`upload-button ${uploading ? "is-busy" : ""}`}>
@@ -545,23 +542,20 @@ function App() {
         {managerSection === "bookings" && <div className="booking-manager">
           <div className="booking-debug-toggle">
             <label><input type="checkbox" checked={bookingDebug} onChange={(event) => setBookingDebug(event.target.checked)} /> Debug-Modus</label>
-            <span>Zeigt technische Details ohne Schlüssel oder Gästedaten.</span>
+            <span>Zeigt technische Details ohne Gästedaten.</span>
           </div>
           {bookingDebug && <aside className="booking-debug-panel" aria-label="Buchungsdiagnose">
             <div className="booking-debug-heading"><strong>Diagnose</strong><button type="button" onClick={() => setBookingDebugEntries([])}>Leeren</button></div>
-            <dl><div><dt>API</dt><dd>{apiBase || window.location.origin}</dd></div><div><dt>Schlüssel</dt><dd>{adminToken.trim() ? "Eingetragen" : "Fehlt"}</dd></div></dl>
+            <dl><div><dt>API</dt><dd>{apiBase || window.location.origin}</dd></div></dl>
             {bookingDebugEntries.length === 0 ? <p>Noch keine Verwaltungsanfrage ausgeführt.</p> : <ol>{bookingDebugEntries.map((entry) => <li key={entry.id} className={typeof entry.status === "number" && entry.status >= 200 && entry.status < 300 ? "is-success" : "is-error"}>
               <time>{entry.timestamp}</time><code>{entry.operation}</code><b>{entry.status}</b><span>{entry.message}</span>
             </li>)}</ol>}
           </aside>}
-          <form className="admin-login" onSubmit={(event) => { event.preventDefault(); void loadAdminBookings(); }}>
-            <label>Verwaltungsschlüssel<input type="password" value={adminToken} onChange={(event) => setAdminToken(event.target.value)} autoComplete="current-password" required /></label>
-            <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird geladen …" : "Buchungen laden"}</button>
-          </form>
+          <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Wird geladen …" : "Buchungen neu laden"}</button>
           {adminError && <p className="manager-error" role="alert">{adminError}</p>}
           <form className="booking-create" onSubmit={createAdminBooking}>
             <h3>Neue Buchung hinzufügen</h3>
-            <p className="booking-create-hint">Tragen Sie oben den Verwaltungsschlüssel und hier die Buchungsdaten ein. Bestehende Buchungen müssen vorher nicht geladen werden.</p>
+            <p className="booking-create-hint">Tragen Sie hier die Buchungsdaten ein. Bestehende Buchungen müssen vorher nicht geladen werden.</p>
             <label>Anreise<input type="date" name="arrival" required /></label>
             <label>Abreise<input type="date" name="departure" required /></label>
             <label>Status<select name="status"><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
@@ -571,8 +565,7 @@ function App() {
             <label className="booking-message-field">Nachricht<textarea name="message" rows={2} /></label>
             <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird angelegt …" : "＋ Buchung hinzufügen"}</button>
           </form>
-          {adminAuthenticated && <>
-            {adminBookings.length > 0 ? <div className="admin-booking-list">{adminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
+          {adminBookings.length > 0 ? <div className="admin-booking-list">{adminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
               <div className="admin-booking-heading"><strong>{booking.name}</strong><span className={`booking-badge is-${booking.status}`}>{booking.status === "booked" ? "Gebucht" : "Reserviert"}</span></div>
               <div className="admin-booking-fields">
                 <label>Anreise<input type="date" value={booking.arrival} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, arrival: event.target.value } : item))} /></label>
@@ -585,7 +578,6 @@ function App() {
               </div>
               <div className="admin-booking-actions"><button disabled={adminBusy} onClick={() => void updateAdminBooking(booking)}>Speichern</button><button className="delete-button" disabled={adminBusy} onClick={() => void deleteAdminBooking(booking)}>Löschen</button></div>
             </article>)}</div> : <div className="manager-empty"><strong>Noch keine Buchungen</strong><span>Legen Sie die erste Buchung über das Formular an.</span></div>}
-          </>}
         </div>}
       </div>}
 

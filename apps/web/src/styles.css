@@ -213,11 +213,9 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .booking-debug-panel li code { color: #f3f0e8; font-size: 10px; }
 .booking-debug-panel li b { color: #d6b978; }
 .booking-debug-panel li.is-success b { color: #a9c3a5; }
-.admin-login { margin-bottom: 28px; padding: 22px; background: #e8e4da; display: flex; align-items: end; gap: 14px; }
-.admin-login label { flex: 1; }
-.admin-login input { width: 100%; }
-.admin-login button, .booking-create button, .admin-booking-actions button { min-height: 40px; padding: 0 17px; border: 1px solid #263127; background: #263127; color: white; cursor: pointer; font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
-.admin-login button:disabled, .booking-create button:disabled, .admin-booking-actions button:disabled { opacity: .55; }
+.reload-bookings-button, .booking-create button, .admin-booking-actions button { min-height: 40px; padding: 0 17px; border: 1px solid #263127; background: #263127; color: white; cursor: pointer; font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
+.reload-bookings-button { margin-bottom: 28px; }
+.reload-bookings-button:disabled, .booking-create button:disabled, .admin-booking-actions button:disabled { opacity: .55; }
 .booking-manager label { color: #777a70; font-size: 8px; text-transform: uppercase; letter-spacing: .15em; }
 .booking-manager input, .booking-manager select, .booking-manager textarea { width: 100%; margin-top: 7px; padding: 10px; border: 1px solid #c2c0b6; border-radius: 0; background: #f7f4ed; color: #263127; font: 12px "DM Sans", sans-serif; }
 .booking-create { margin-bottom: 28px; padding: 22px; border: 1px solid #c9c7bd; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: end; }
@@ -286,7 +284,6 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .manager-toolbar { display: block; }
   .manager-toolbar p { margin: 13px 0 0; }
   .manager-toolbar .order-hint { margin-left: 0; }
-  .admin-login { align-items: stretch; flex-direction: column; }
   .booking-debug-toggle { align-items: flex-start; flex-direction: column; gap: 7px; }
   .booking-debug-panel dl { align-items: flex-start; flex-direction: column; gap: 6px; }
   .booking-debug-panel li { grid-template-columns: 55px 1fr 45px; }

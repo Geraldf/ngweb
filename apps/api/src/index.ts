@@ -1,7 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -100,22 +100,6 @@ function overlapsBooking(bookings: Booking[], fields: BookingFields, ignoredId?:
   return bookings.some((booking) => booking.id !== ignoredId && fields.arrival < booking.departure && fields.departure > booking.arrival);
 }
 
-function requireBookingAdmin(request: express.Request, response: express.Response, next: express.NextFunction) {
-  const expected = process.env.BOOKING_ADMIN_TOKEN;
-  if (!expected) {
-    response.status(503).json({ message: "Die Buchungsverwaltung ist nicht konfiguriert." });
-    return;
-  }
-  const supplied = request.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const expectedBuffer = Buffer.from(expected);
-  const suppliedBuffer = Buffer.from(supplied);
-  if (expectedBuffer.length !== suppliedBuffer.length || !timingSafeEqual(expectedBuffer, suppliedBuffer)) {
-    response.status(401).json({ message: "Der Verwaltungsschlüssel ist ungültig." });
-    return;
-  }
-  next();
-}
-
 app.get("/api/health", (_request, response) => {
   response.json({ status: "ok", service: "fuchsclan-api" });
 });
@@ -165,7 +149,7 @@ app.post("/api/bookings", async (request, response, next) => {
   }
 });
 
-app.get("/api/admin/bookings", requireBookingAdmin, async (_request, response, next) => {
+app.get("/api/admin/bookings", async (_request, response, next) => {
   try {
     const bookings = await readBookings();
     response.json(bookings.map((booking) => ({ ...booking, status: booking.status === "booked" ? "booked" : "reserved" })));
@@ -174,7 +158,7 @@ app.get("/api/admin/bookings", requireBookingAdmin, async (_request, response, n
   }
 });
 
-app.post("/api/admin/bookings", requireBookingAdmin, async (request, response, next) => {
+app.post("/api/admin/bookings", async (request, response, next) => {
   try {
     const fields = bookingFields(request.body as Record<string, unknown>);
     if (!fields) {
@@ -194,7 +178,7 @@ app.post("/api/admin/bookings", requireBookingAdmin, async (request, response, n
   }
 });
 
-app.patch("/api/admin/bookings/:id", requireBookingAdmin, async (request, response, next) => {
+app.patch("/api/admin/bookings/:id", async (request, response, next) => {
   try {
     const bookings = await readBookings();
     const index = bookings.findIndex((booking) => booking.id === request.params.id);
@@ -219,7 +203,7 @@ app.patch("/api/admin/bookings/:id", requireBookingAdmin, async (request, respon
   }
 });
 
-app.delete("/api/admin/bookings/:id", requireBookingAdmin, async (request, response, next) => {
+app.delete("/api/admin/bookings/:id", async (request, response, next) => {
   try {
     const bookings = await readBookings();
     if (!bookings.some((booking) => booking.id === request.params.id)) {

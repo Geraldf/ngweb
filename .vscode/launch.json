@@ -9,9 +9,6 @@
       "runtimeArgs": ["run", "dev"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env",
-      "env": {
-        "BOOKING_ADMIN_TOKEN": "${input:bookingAdminToken}"
-      },
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "autoAttachChildProcesses": true,
@@ -36,9 +33,6 @@
       ],
       "cwd": "${workspaceFolder}/apps/api",
       "envFile": "${workspaceFolder}/.env",
-      "env": {
-        "BOOKING_ADMIN_TOKEN": "${input:bookingAdminToken}"
-      },
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**"]
@@ -66,14 +60,6 @@
       "port": 9229,
       "restart": true,
       "skipFiles": ["<node_internals>/**"]
-    }
-  ],
-  "inputs": [
-    {
-      "id": "bookingAdminToken",
-      "type": "promptString",
-      "description": "Booking administration token for this debug session",
-      "password": true
     }
   ]
 }
