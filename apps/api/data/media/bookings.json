@@ -1,0 +1,13 @@
+[
+  {
+    "id": "de8436a8-ba75-415d-b283-fd557bdb859b",
+    "arrival": "2026-08-10",
+    "departure": "2026-08-19",
+    "status": "booked",
+    "name": "Gerald Fuchs",
+    "email": "gerald@fuchsclan.de",
+    "guests": 2,
+    "message": "sdfsdfds",
+    "createdAt": "2026-08-10T18:50:43.217Z"
+  }
+]
