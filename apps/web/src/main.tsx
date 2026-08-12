@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import webPackage from "../package.json";
 import ausstattungImage from "./assets/Ausstattung.jpg";
 import badezimmerImage from "./assets/BadeZimmer.jpeg";
+import locationMapImage from "./assets/casa-location-map.png";
 import heroImage from "./assets/frontimage.jpg";
 import gartenImage from "./assets/Garten.jpg";
 import kinderzimmerImage from "./assets/Kinderzimmer.jpg";
@@ -550,6 +551,14 @@ function App() {
               <p>Die Küstenstraße SS125 führt direkt an Baia Sant’Anna vorbei und verbindet den Nordosten mit vielen sehenswerten Orten der Insel. Vom Hafen oder Flughafen Olbia erreichen Sie die Casa über die SS125 oder SS131 in etwa 30 bis 35 Minuten.</p>
             </article>
           </div>
+
+          <figure className="location-map">
+            <img src={locationMapImage} alt="Illustrierte Lagekarte der Casa Baia Sant’Anna bei den Koordinaten 40.6855258 Nord und 9.7383962 Ost" loading="lazy" />
+            <figcaption>
+              <div><span>Exakte Position</span><strong>40.6855258 N · 9.7383962 E</strong></div>
+              <a href="https://www.google.de/maps/place/CASA+BAIA+SANT+ANNA/@40.6855298,9.7358159,748m/data=!3m2!1e3!4b1!4m6!3m5!1s0x12dedb92f8b8838d:0xe5e1f73dbbd3b38d!8m2!3d40.6855258!4d9.7383962!16s%2Fg%2F11yk4ddk7c" target="_blank" rel="noreferrer">In Google Maps öffnen <span>↗</span></a>
+            </figcaption>
+          </figure>
 
           <div className="location-guide">
             <div className="distance-panel">

@@ -113,6 +113,14 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .location-details span { color: #c4c9bb; font-size: 9px; letter-spacing: .18em; }
 .location-details h3, .activity-panel h3 { margin: 24px 0 20px; font: 400 34px "Italiana", serif; }
 .location-details p { margin: 0; color: #e1e3dc; font-size: 13px; line-height: 1.85; }
+.location-map { max-width: 1320px; margin: 0 auto 90px; }
+.location-map img { width: 100%; aspect-ratio: 3 / 2; display: block; object-fit: cover; }
+.location-map figcaption { padding: 24px 0; border-bottom: 1px solid rgba(255,255,255,.3); display: flex; align-items: center; justify-content: space-between; gap: 30px; }
+.location-map figcaption div { display: flex; align-items: baseline; gap: 20px; }
+.location-map figcaption span { color: #cdd2c7; font-size: 9px; text-transform: uppercase; letter-spacing: .15em; }
+.location-map figcaption strong { font-size: 12px; font-weight: 400; letter-spacing: .08em; }
+.location-map figcaption a { padding-bottom: 7px; border-bottom: 1px solid rgba(255,255,255,.6); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; }
+.location-map figcaption a span { margin-left: 14px; color: inherit; }
 .location-guide { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: .9fr 1.1fr; gap: 10%; }
 .location-guide .eyebrow { color: #d2d5ca; }
 .distance-panel dl { margin: 32px 0 0; border-top: 1px solid rgba(255,255,255,.3); }
@@ -303,6 +311,9 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .location-details { margin-bottom: 70px; display: block; }
   .location-details article, .location-details article + article { padding: 38px 0; border-left: 0; }
   .location-details article + article { border-top: 1px solid rgba(255,255,255,.3); }
+  .location-map { margin-bottom: 70px; }
+  .location-map img { aspect-ratio: 1 / 1; }
+  .location-map figcaption, .location-map figcaption div { align-items: flex-start; flex-direction: column; gap: 12px; }
   .location-guide { display: block; }
   .activity-panel { margin-top: 70px; }
   .prices-section { padding: 95px 24px 100px; }
