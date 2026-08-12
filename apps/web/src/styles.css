@@ -59,7 +59,7 @@ button { font: inherit; }
 .casa-feature p { margin: 0; color: #666a61; font-size: 13px; line-height: 1.85; }
 .casa-feature p + p { margin-top: 14px; }
 .casa-feature .feature-number { padding-top: 8px; color: #8a8d81; font-size: 9px; letter-spacing: .18em; }
-footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 5vw; font-size: 9px; text-transform: uppercase; letter-spacing: .15em; }
+footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 5vw; font-size: 9px; text-transform: uppercase; letter-spacing: .15em; }
 .footer-brand { text-transform: none; }
 
 .legal-page { min-height: 100vh; }
