@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import webPackage from "../package.json";
 import ausstattungImage from "./assets/Ausstattung.jpg";
 import badezimmerImage from "./assets/BadeZimmer.jpeg";
+import locationMapImage from "./assets/casa-location-map.png";
 import heroImage from "./assets/frontimage.jpg";
 import gartenImage from "./assets/Garten.jpg";
 import kinderzimmerImage from "./assets/Kinderzimmer.jpg";
@@ -13,6 +14,19 @@ import wohnenKuecheImage from "./assets/Wohnen_Kueche.jpg";
 import "./styles.css";
 
 const links = ["Home", "La Casa", "Galerie", "Lage & Infos", "Preise & Kalender"];
+const googleMapsUrl = "https://www.google.de/maps/place/CASA+BAIA+SANT+ANNA/@40.6855298,9.7358159,748m/data=!3m2!1e3!4b1!4m6!3m5!1s0x12dedb92f8b8838d:0xe5e1f73dbbd3b38d!8m2!3d40.6855258!4d9.7383962!16s%2Fg%2F11yk4ddk7c";
+const destinations = [
+  ["Budoni", "5 Min."],
+  ["Porto Ottiolu", "10 Min."],
+  ["Posada", "10 Min."],
+  ["San Teodoro", "15 Min."],
+  ["La Caletta", "15 Min."],
+  ["Santa Lucia", "20 Min."],
+  ["Olbia · Hafen & Flughafen", "35 Min."],
+  ["Orosei", "40 Min."],
+  ["Cala Gonone", "60 Min."],
+] as const;
+const activities = ["Schwimmen", "SUP", "Surfen & Kitesurfen", "Tauchen", "Reiten", "Wandern", "Radfahren", "Yoga", "Bootstouren", "Schnorcheln", "Naturparks", "Wasserfälle", "Weingüter", "Klettern", "Segeln", "Golf"];
 type MediaItem = { id: string; filename: string; title: string; mimeType: string; placement: "library" | "gallery"; order: number; createdAt: string };
 type GalleryPhoto = { id: string; src: string; title: string; position?: string; className?: string };
 type BookingStatus = "requested" | "reserved" | "booked";
@@ -445,7 +459,7 @@ function App() {
         </section>
         <section className="casa-section" aria-labelledby="casa-title">
           <div className="casa-intro">
-            <div className="section-number">03 <span /></div>
+            <div className="section-number">02 <span /></div>
             <div className="casa-heading">
               <p className="eyebrow dark">La Casa</p>
               <h2 id="casa-title">Unser<br /><em>Wohlfühlort.</em></h2>
@@ -501,7 +515,7 @@ function App() {
         </section>
         <section className="gallery-section" id="galerie">
           <div className="gallery-intro">
-            <div className="section-number">02 <span /></div>
+            <div className="section-number">03 <span /></div>
             <div><p className="eyebrow dark">Impressionen</p><h2>Augenblicke<br /><em>am Meer.</em></h2></div>
             <p>Ein Haus zwischen Himmel und Macchia. Entdecken Sie die stillen Ecken, das warme Licht und den Blick auf Sardiniens Küste.</p>
           </div>
@@ -513,9 +527,58 @@ function App() {
           </div>
         </section>
 
+        <section className="location-section" id="lage" aria-labelledby="location-title">
+          <div className="location-intro">
+            <div className="section-number">04 <span /></div>
+            <div>
+              <p className="eyebrow">Lage &amp; Infos</p>
+              <h2 id="location-title">Zwischen Meer<br /><em>und Macchia.</em></h2>
+            </div>
+            <div className="location-lead">
+              <p>Die Casa liegt in Baia Sant’Anna, einem kleinen, ruhigen Ort im Nordosten Sardiniens – als letztes Haus der Straße direkt an einem Naturschutzgebiet, mit weitem, unverbautem Blick in die ursprüngliche Landschaft.</p>
+              <p>Strand und Meer erreichen Sie in wenigen Minuten zu Fuß. Weitere traumhafte Strände und Ausflugsziele liegen ganz in der Nähe.</p>
+            </div>
+          </div>
+
+          <div className="location-details">
+            <article>
+              <span>01</span>
+              <h3>Alles in der Nähe</h3>
+              <p>Baia Sant’Anna grenzt an Tanaunella und gehört zur Gemeinde Budoni. Dort finden Sie alles für den täglichen Bedarf: Supermärkte, Bäckereien, Metzgereien, Apotheken, Ärzte, Banken, Geschäfte und eine große Auswahl an Restaurants.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3>Gut erreichbar</h3>
+              <p>Die Küstenstraße SS125 führt direkt an Baia Sant’Anna vorbei und verbindet den Nordosten mit vielen sehenswerten Orten der Insel. Vom Hafen oder Flughafen Olbia erreichen Sie die Casa über die SS125 oder SS131 in etwa 30 bis 35 Minuten.</p>
+            </article>
+          </div>
+
+          <figure className="location-map">
+            <a className="location-map-link" href={googleMapsUrl} target="_blank" rel="noreferrer" aria-label="Position der Casa in Google Maps öffnen">
+              <img src={locationMapImage} alt="Illustrierte Lagekarte der Casa Baia Sant’Anna bei den Koordinaten 40.6855258 Nord und 9.7383962 Ost" loading="lazy" />
+            </a>
+            <figcaption>
+              <div><span>Exakte Position</span><strong>40.6855258 N · 9.7383962 E</strong></div>
+              <a href={googleMapsUrl} target="_blank" rel="noreferrer">In Google Maps öffnen <span>↗</span></a>
+            </figcaption>
+          </figure>
+
+          <div className="location-guide">
+            <div className="distance-panel">
+              <p className="eyebrow">Entfernungen mit dem Auto</p>
+              <dl>{destinations.map(([place, duration]) => <div key={place}><dt>{place}</dt><dd>{duration}</dd></div>)}</dl>
+            </div>
+            <div className="activity-panel">
+              <p className="eyebrow">Freizeitmöglichkeiten</p>
+              <h3>Draußen zuhause.</h3>
+              <ul>{activities.map((activity) => <li key={activity}>{activity}</li>)}</ul>
+            </div>
+          </div>
+        </section>
+
         <section className="prices-section" id="preise" aria-labelledby="prices-title">
           <div className="prices-intro">
-            <div className="section-number">04 <span /></div>
+            <div className="section-number">05 <span /></div>
             <div><p className="eyebrow dark">Preise &amp; Kalender</p><h2 id="prices-title">Zeit für<br /><em>Sardinien.</em></h2></div>
             <p>Die Casa bietet Platz für bis zu vier Personen. Wählen Sie Ihren Reisezeitraum und senden Sie uns direkt Ihre unverbindliche Buchungsanfrage.</p>
           </div>
