@@ -99,6 +99,29 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .gallery-card.tall { grid-row: span 2; }
 .gallery-card img { width: 100%; height: 100%; display: block; object-fit: cover; transition: transform .8s cubic-bezier(.2,.7,.2,1); }
 .gallery-card:hover img { transform: scale(1.035); }
+.location-section { padding: 145px 5vw 160px; background: #697261; color: #f3f0e8; }
+.location-intro { max-width: 1320px; margin: 0 auto 100px; display: grid; grid-template-columns: 12% 43% 1fr; gap: 5%; }
+.location-intro .section-number { color: #d2d5ca; }
+.location-intro .section-number span { background: #aeb5a5; }
+.location-intro h2 { margin: 0; font: 400 clamp(55px, 6.4vw, 98px)/.95 "Italiana", serif; letter-spacing: -.03em; }
+.location-intro h2 em { color: #c4c9bb; font-weight: 400; }
+.location-lead { padding-top: 58px; color: #e1e3dc; font-size: 13px; line-height: 1.9; }
+.location-lead p:first-child { margin-top: 0; color: #fff; font: 400 24px/1.45 "Italiana", serif; }
+.location-details { max-width: 1320px; margin: 0 auto 90px; display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid rgba(255,255,255,.3); border-bottom: 1px solid rgba(255,255,255,.3); }
+.location-details article { padding: 50px 9% 55px 0; }
+.location-details article + article { padding-left: 9%; padding-right: 0; border-left: 1px solid rgba(255,255,255,.3); }
+.location-details span { color: #c4c9bb; font-size: 9px; letter-spacing: .18em; }
+.location-details h3, .activity-panel h3 { margin: 24px 0 20px; font: 400 34px "Italiana", serif; }
+.location-details p { margin: 0; color: #e1e3dc; font-size: 13px; line-height: 1.85; }
+.location-guide { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: .9fr 1.1fr; gap: 10%; }
+.location-guide .eyebrow { color: #d2d5ca; }
+.distance-panel dl { margin: 32px 0 0; border-top: 1px solid rgba(255,255,255,.3); }
+.distance-panel dl div { padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.2); display: flex; justify-content: space-between; gap: 25px; }
+.distance-panel dt, .distance-panel dd { margin: 0; font-size: 11px; }
+.distance-panel dd { color: #cdd2c7; text-transform: uppercase; letter-spacing: .12em; }
+.activity-panel h3 { margin-top: 0; font-size: clamp(40px, 4.5vw, 65px); }
+.activity-panel ul { margin: 35px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; list-style: none; }
+.activity-panel li { padding: 11px 14px; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; font-size: 9px; text-transform: uppercase; letter-spacing: .12em; }
 .prices-section { padding: 145px 5vw 160px; background: #f3f0e8; }
 .prices-intro { max-width: 1320px; margin: 0 auto 80px; display: grid; grid-template-columns: 12% 47% 1fr; gap: 5%; align-items: end; }
 .prices-intro h2 { margin: 0; font: 400 clamp(55px, 6.4vw, 98px)/.95 "Italiana", serif; letter-spacing: -.03em; }
@@ -273,6 +296,15 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .gallery-grid { display: block; }
   .gallery-card { width: 100%; height: 330px; margin-bottom: 14px; }
   .gallery-card.tall { height: 480px; }
+  .location-section { padding: 95px 24px 100px; }
+  .location-intro { margin-bottom: 70px; display: block; }
+  .location-intro .section-number { margin-bottom: 45px; }
+  .location-lead { padding-top: 38px; }
+  .location-details { margin-bottom: 70px; display: block; }
+  .location-details article, .location-details article + article { padding: 38px 0; border-left: 0; }
+  .location-details article + article { border-top: 1px solid rgba(255,255,255,.3); }
+  .location-guide { display: block; }
+  .activity-panel { margin-top: 70px; }
   .prices-section { padding: 95px 24px 100px; }
   .prices-intro { margin-bottom: 55px; display: block; }
   .prices-intro .section-number { margin-bottom: 45px; }
