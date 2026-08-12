@@ -1,6 +1,7 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { createRoot } from "react-dom/client";
+import webPackage from "../package.json";
 import ausstattungImage from "./assets/Ausstattung.jpg";
 import badezimmerImage from "./assets/BadeZimmer.jpeg";
 import heroImage from "./assets/frontimage.jpg";
@@ -642,7 +643,7 @@ function App() {
         </div>}
       </div>}
 
-      <footer><a className="brand footer-brand" href="/#home"><span className="brand-mark">CB</span><span className="brand-copy"><strong>Casa Baia Sant’Anna</strong><small>Sardegna</small></span></a><p>© 2026 Casa Baia Sant’Anna</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; <a href="/datenschutz">Datenschutz</a></p></footer>
+      <footer><a className="brand footer-brand" href="/#home"><span className="brand-mark">CB</span><span className="brand-copy"><strong>Casa Baia Sant’Anna</strong><small>Sardegna</small></span></a><p>© 2026 Casa Baia Sant’Anna</p><p>Version {webPackage.version}</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; <a href="/datenschutz">Datenschutz</a></p></footer>
     </>
   );
 }
