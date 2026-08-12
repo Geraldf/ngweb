@@ -14,6 +14,7 @@ import wohnenKuecheImage from "./assets/Wohnen_Kueche.jpg";
 import "./styles.css";
 
 const links = ["Home", "La Casa", "Galerie", "Lage & Infos", "Preise & Kalender"];
+const googleMapsUrl = "https://www.google.de/maps/place/CASA+BAIA+SANT+ANNA/@40.6855298,9.7358159,748m/data=!3m2!1e3!4b1!4m6!3m5!1s0x12dedb92f8b8838d:0xe5e1f73dbbd3b38d!8m2!3d40.6855258!4d9.7383962!16s%2Fg%2F11yk4ddk7c";
 const destinations = [
   ["Budoni", "5 Min."],
   ["Porto Ottiolu", "10 Min."],
@@ -553,10 +554,12 @@ function App() {
           </div>
 
           <figure className="location-map">
-            <img src={locationMapImage} alt="Illustrierte Lagekarte der Casa Baia Sant’Anna bei den Koordinaten 40.6855258 Nord und 9.7383962 Ost" loading="lazy" />
+            <a className="location-map-link" href={googleMapsUrl} target="_blank" rel="noreferrer" aria-label="Position der Casa in Google Maps öffnen">
+              <img src={locationMapImage} alt="Illustrierte Lagekarte der Casa Baia Sant’Anna bei den Koordinaten 40.6855258 Nord und 9.7383962 Ost" loading="lazy" />
+            </a>
             <figcaption>
               <div><span>Exakte Position</span><strong>40.6855258 N · 9.7383962 E</strong></div>
-              <a href="https://www.google.de/maps/place/CASA+BAIA+SANT+ANNA/@40.6855298,9.7358159,748m/data=!3m2!1e3!4b1!4m6!3m5!1s0x12dedb92f8b8838d:0xe5e1f73dbbd3b38d!8m2!3d40.6855258!4d9.7383962!16s%2Fg%2F11yk4ddk7c" target="_blank" rel="noreferrer">In Google Maps öffnen <span>↗</span></a>
+              <a href={googleMapsUrl} target="_blank" rel="noreferrer">In Google Maps öffnen <span>↗</span></a>
             </figcaption>
           </figure>
 

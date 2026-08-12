@@ -114,6 +114,9 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .location-details h3, .activity-panel h3 { margin: 24px 0 20px; font: 400 34px "Italiana", serif; }
 .location-details p { margin: 0; color: #e1e3dc; font-size: 13px; line-height: 1.85; }
 .location-map { max-width: 1320px; margin: 0 auto 90px; }
+.location-map-link { display: block; cursor: pointer; transition: opacity .25s; }
+.location-map-link:hover { opacity: .92; }
+.location-map-link:focus-visible { outline: 3px solid #f3f0e8; outline-offset: 4px; }
 .location-map img { width: 100%; aspect-ratio: 3 / 2; display: block; object-fit: cover; }
 .location-map figcaption { padding: 24px 0; border-bottom: 1px solid rgba(255,255,255,.3); display: flex; align-items: center; justify-content: space-between; gap: 30px; }
 .location-map figcaption div { display: flex; align-items: baseline; gap: 20px; }
