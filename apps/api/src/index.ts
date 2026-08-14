@@ -1,7 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -104,6 +104,26 @@ function normalizedStatus(status: Booking["status"]) {
   return status === "booked" || status === "requested" ? status : "reserved";
 }
 
+function requireAdmin(request: express.Request, response: express.Response, next: express.NextFunction) {
+  const expected = process.env.ADMIN_TOKEN;
+  if (!expected) {
+    response.status(503).json({ message: "Die Verwaltung ist nicht konfiguriert." });
+    return;
+  }
+
+  const authorization = request.get("authorization") ?? "";
+  const supplied = authorization.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  if (expectedBuffer.length !== suppliedBuffer.length || !timingSafeEqual(expectedBuffer, suppliedBuffer)) {
+    response.set("WWW-Authenticate", "Bearer");
+    response.status(401).json({ message: "Der Verwaltungsschlüssel ist ungültig." });
+    return;
+  }
+
+  next();
+}
+
 app.get("/api/health", (_request, response) => {
   response.json({ status: "ok", service: "fuchsclan-api" });
 });
@@ -151,6 +171,12 @@ app.post("/api/bookings", async (request, response, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+app.use("/api/admin", requireAdmin);
+
+app.get("/api/admin/session", (_request, response) => {
+  response.status(204).end();
 });
 
 app.get("/api/admin/bookings", async (_request, response, next) => {
@@ -223,6 +249,7 @@ app.delete("/api/admin/bookings/:id", async (request, response, next) => {
 
 app.post(
   "/api/media",
+  requireAdmin,
   express.raw({ type: Object.keys(supportedTypes), limit: "10mb" }),
   async (request, response, next) => {
     try {
@@ -257,7 +284,7 @@ app.post(
   },
 );
 
-app.patch("/api/media/:id", async (request, response, next) => {
+app.patch("/api/media/:id", requireAdmin, async (request, response, next) => {
   try {
     const items = await readMedia();
     const index = items.findIndex((item) => item.id === request.params.id);
@@ -285,7 +312,7 @@ app.patch("/api/media/:id", async (request, response, next) => {
   }
 });
 
-app.put("/api/media/order", async (request, response, next) => {
+app.put("/api/media/order", requireAdmin, async (request, response, next) => {
   try {
     const items = await readMedia();
     const ids = request.body.ids;
@@ -309,7 +336,7 @@ app.put("/api/media/order", async (request, response, next) => {
   }
 });
 
-app.delete("/api/media/:id", async (request, response, next) => {
+app.delete("/api/media/:id", requireAdmin, async (request, response, next) => {
   try {
     const items = await readMedia();
     const item = items.find((candidate) => candidate.id === request.params.id);
