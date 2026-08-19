@@ -56,10 +56,10 @@ The tag publishes `1.0.0`, `1.0`, `sha-<commit>`, and `latest` container tags, t
 
 ## Image management
 
-Open **Inhalte verwalten** and select **Bilder** to upload, rename, reorder, place, or delete images. New uploads are shown in the public gallery by default and can be changed to **Nur Bibliothek** to keep them off the website without deleting them.
+Open **Inhalte verwalten**, enter the administration key configured in `ADMIN_TOKEN`, and select **Bilder** to upload, rename, reorder, place, or delete images. New uploads are shown in the public gallery by default and can be changed to **Nur Bibliothek** to keep them off the website without deleting them.
 
 The API accepts JPEG, PNG, WebP, and GIF files up to 10 MB. Image files and their metadata persist under `MEDIA_DATA_DIR` (`data/media` by default); mount or back up that directory in production.
 
 ## Booking management
 
-Open **Inhalte verwalten** and select **Buchungen** to create, view, edit, confirm, or delete bookings. No administration key is required.
+Open **Inhalte verwalten** and enter the administration key configured in `ADMIN_TOKEN` to create, view, edit, confirm, or delete bookings. Generate a strong production key, for example with `openssl rand -hex 32`, and provide it through the deployment environment rather than committing it to Git.

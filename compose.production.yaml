@@ -10,6 +10,7 @@ services:
       MEDIA_DATA_DIR: /app/data/media
       WEB_DIST_DIR: /app/apps/web/dist
       CLIENT_ORIGIN: "${CLIENT_ORIGIN:-http://localhost}"
+      ADMIN_TOKEN: "${ADMIN_TOKEN:?Set ADMIN_TOKEN to a long random secret}"
     volumes:
       - media_data:/app/data/media
     init: true

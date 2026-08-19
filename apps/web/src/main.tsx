@@ -100,6 +100,8 @@ function App() {
     const now = new Date();
     return new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
   });
+  const [adminToken, setAdminToken] = useState("");
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   const [adminBookings, setAdminBookings] = useState<AdminBooking[]>([]);
   const [adminError, setAdminError] = useState("");
   const [adminBusy, setAdminBusy] = useState(false);
@@ -139,10 +141,15 @@ function App() {
     }
   };
 
+  const authenticatedRequest = (url: string, init: RequestInit = {}) => fetch(url, {
+    ...init,
+    headers: { Authorization: `Bearer ${adminToken}`, ...init.headers },
+  });
+
   const adminRequest = async (path = "", init: RequestInit = {}) => {
     const operation = `${init.method ?? "GET"} /api/admin/bookings${path}`;
     try {
-      const response = await fetch(`${apiBase}/api/admin/bookings${path}`, {
+      const response = await authenticatedRequest(`${apiBase}/api/admin/bookings${path}`, {
         ...init,
         headers: { "Content-Type": "application/json", ...init.headers },
       });
@@ -164,6 +171,26 @@ function App() {
         console.error("[booking-debug]", entry);
       }
       throw error;
+    }
+  };
+
+  const authenticateAdmin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAdminBusy(true);
+    setAdminError("");
+    try {
+      const response = await authenticatedRequest(`${apiBase}/api/admin/session`);
+      if (!response.ok) {
+        const result = await response.json() as { message?: string };
+        throw new Error(result.message ?? "Anmeldung fehlgeschlagen.");
+      }
+      setAdminAuthenticated(true);
+      await loadAdminBookings();
+    } catch (error) {
+      setAdminAuthenticated(false);
+      setAdminError(error instanceof Error ? error.message : "Anmeldung fehlgeschlagen.");
+    } finally {
+      setAdminBusy(false);
     }
   };
 
@@ -231,7 +258,7 @@ function App() {
     setMediaError("");
     try {
       for (const file of files) {
-        const response = await fetch(`${apiBase}/api/media`, {
+        const response = await authenticatedRequest(`${apiBase}/api/media`, {
           method: "POST",
           headers: { "Content-Type": file.type, "X-File-Name": encodeURIComponent(file.name) },
           body: file,
@@ -249,7 +276,7 @@ function App() {
 
   const updateMedia = async (item: MediaItem, changes: Partial<Pick<MediaItem, "title" | "placement" | "order">>) => {
     setMedia((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, ...changes } : candidate));
-    const response = await fetch(`${apiBase}/api/media/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(changes) });
+    const response = await authenticatedRequest(`${apiBase}/api/media/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(changes) });
     if (!response.ok) { setMediaError("Die Änderung konnte nicht gespeichert werden."); await loadMedia(); }
   };
 
@@ -265,7 +292,7 @@ function App() {
     setMediaError("");
 
     try {
-      const response = await fetch(`${apiBase}/api/media/order`, {
+      const response = await authenticatedRequest(`${apiBase}/api/media/order`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: normalized.map((candidate) => candidate.id) }),
@@ -280,7 +307,7 @@ function App() {
 
   const deleteMedia = async (item: MediaItem) => {
     if (!window.confirm(`„${item.title}“ endgültig löschen?`)) return;
-    const response = await fetch(`${apiBase}/api/media/${item.id}`, { method: "DELETE" });
+    const response = await authenticatedRequest(`${apiBase}/api/media/${item.id}`, { method: "DELETE" });
     if (response.ok) setMedia((current) => current.filter((candidate) => candidate.id !== item.id));
     else setMediaError("Das Bild konnte nicht gelöscht werden.");
   };
@@ -288,7 +315,7 @@ function App() {
   const openBookingManager = () => {
     setManagerSection("bookings");
     setManagerOpen(true);
-    void loadAdminBookings();
+    if (adminAuthenticated) void loadAdminBookings();
   };
 
   const createAdminBooking = async (event: FormEvent<HTMLFormElement>) => {
@@ -637,6 +664,11 @@ function App() {
           <div><p className="eyebrow">Website-Inhalte</p><h2 id="manager-title">Inhalte verwalten</h2></div>
           <button className="manager-close" onClick={() => setManagerOpen(false)} aria-label="Verwaltung schließen">×</button>
         </div>
+        {!adminAuthenticated ? <form className="admin-login" onSubmit={authenticateAdmin}>
+          <label>Verwaltungsschlüssel<input type="password" value={adminToken} onChange={(event) => setAdminToken(event.target.value)} autoComplete="current-password" required /></label>
+          <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird geprüft …" : "Anmelden"}</button>
+          {adminError && <p className="manager-error" role="alert">{adminError}</p>}
+        </form> : <>
         <nav className="manager-tabs" aria-label="Verwaltungsbereiche">
           <button className={managerSection === "images" ? "is-active" : ""} onClick={() => setManagerSection("images")}>Bilder</button>
           <button className={managerSection === "bookings" ? "is-active" : ""} onClick={() => { setManagerSection("bookings"); void loadAdminBookings(); }}>Buchungen</button>
@@ -704,6 +736,7 @@ function App() {
               <div className="admin-booking-actions"><button disabled={adminBusy} onClick={() => void updateAdminBooking(booking)}>Speichern</button><button className="delete-button" disabled={adminBusy} onClick={() => void deleteAdminBooking(booking)}>Löschen</button></div>
             </article>)}</div> : <div className="manager-empty"><strong>Noch keine Buchungen</strong><span>Legen Sie die erste Buchung über das Formular an.</span></div>}
         </div>}
+        </>}
       </div>}
 
       <footer><a className="brand footer-brand" href="/#home"><span className="brand-mark">CB</span><span className="brand-copy"><strong>Casa Baia Sant’Anna</strong><small>Sardegna</small></span></a><p>© 2026 Casa Baia Sant’Anna</p><p>Version {webPackage.version}</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; <a href="/datenschutz">Datenschutz</a></p></footer>

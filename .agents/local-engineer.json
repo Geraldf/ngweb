@@ -1,0 +1,15 @@
+{
+  "name": "Local Assistant",
+  "role": "engineer",
+  "title": "Local LLM Specialist",
+  "icon": "🤖",
+  "reportsTo": "ceo",
+  "adapter": {
+    "type": "opencode_local",
+    "model": "local_llm/Jan-v3.5-4B",
+    "config": {
+      "baseURL": "http://192.168.9.253:1337/v1"
+    }
+  },
+  "capabilities": "Executes local coding and analysis tasks using on-premise hardware."
+}
