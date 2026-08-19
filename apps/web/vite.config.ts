@@ -3,6 +3,15 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        assetFileNames: (assetInfo) => assetInfo.names.some((name) => name.endsWith("frontimage.jpg"))
+          ? "social-preview.jpg"
+          : "assets/[name]-[hash][extname]",
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

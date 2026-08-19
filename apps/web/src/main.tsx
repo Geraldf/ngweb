@@ -1,6 +1,9 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { createRoot } from "react-dom/client";
+import "@fontsource/dm-sans/latin-400.css";
+import "@fontsource/dm-sans/latin-600.css";
+import "@fontsource/italiana/latin-400.css";
 import webPackage from "../package.json";
 import ausstattungImage from "./assets/Ausstattung.jpg";
 import badezimmerImage from "./assets/BadeZimmer.jpeg";
@@ -65,15 +68,14 @@ function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange
         if (day === null) return <span className="calendar-day is-empty" aria-hidden="true" key={`empty-${index}`} />;
         const date = new Date(Date.UTC(year, monthIndex, day));
         const dateKey = isoDate(date);
-        const occupied = highestPriorityBooking(bookings.filter((booking) => booking.arrival < dateKey && dateKey < booking.departure));
-        const arriving = highestPriorityBooking(bookings.filter((booking) => booking.arrival === dateKey));
-        const departing = highestPriorityBooking(bookings.filter((booking) => booking.departure === dateKey));
-        const statusLabel = occupied
-          ? bookingStatusLabel(occupied.status)
-          : [departing && `Abreise (${bookingStatusLabel(departing.status).toLocaleLowerCase("de-DE")})`, arriving && `Anreise (${bookingStatusLabel(arriving.status).toLocaleLowerCase("de-DE")})`].filter(Boolean).join(", ") || "Verfügbar";
-        return <span className={`calendar-day${occupied ? ` is-${occupied.status}` : ""}`} role="gridcell" aria-label={`${fullDateFormatter.format(date)}: ${statusLabel}`} key={dateKey}>
-          {departing && <i className={`calendar-departure is-${departing.status}`} aria-hidden="true" />}
-          {arriving && <i className={`calendar-arrival is-${arriving.status}`} aria-hidden="true" />}
+        const unavailableBookings = bookings.filter((booking) => booking.status !== "requested");
+        const occupied = highestPriorityBooking(unavailableBookings.filter((booking) => booking.arrival < dateKey && dateKey < booking.departure));
+        const arriving = highestPriorityBooking(unavailableBookings.filter((booking) => booking.arrival === dateKey));
+        const departing = highestPriorityBooking(unavailableBookings.filter((booking) => booking.departure === dateKey));
+        const statusLabel = occupied || arriving || departing ? "Nicht verfügbar" : "Verfügbar";
+        return <span className={`calendar-day${occupied ? " is-unavailable" : ""}`} role="gridcell" aria-label={`${fullDateFormatter.format(date)}: ${statusLabel}`} key={dateKey}>
+          {departing && <i className="calendar-departure is-unavailable" aria-hidden="true" />}
+          {arriving && <i className="calendar-arrival is-unavailable" aria-hidden="true" />}
           <time dateTime={dateKey}>{day}</time>
         </span>;
       })}
@@ -82,6 +84,15 @@ function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange
 }
 
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
+function trackEvent(name: string, detail: Record<string, string | number> = {}) {
+  window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
+}
+
+function nightlyRate(date: Date) {
+  const month = date.getUTCMonth();
+  return month <= 2 || month === 10 || month === 11 ? 120 : month <= 5 || month === 9 ? 160 : 210;
+}
 
 function App() {
   const isImpressum = window.location.pathname.replace(/\/$/, "") === "/impressum";
@@ -96,6 +107,9 @@ function App() {
   const [bookings, setBookings] = useState<BookingRange[]>([]);
   const [bookingStatus, setBookingStatus] = useState("");
   const [bookingBusy, setBookingBusy] = useState(false);
+  const [arrival, setArrival] = useState("");
+  const [departure, setDeparture] = useState("");
+  const [bookingErrors, setBookingErrors] = useState<{ arrival?: string; departure?: string }>({});
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
     return new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
@@ -118,6 +132,19 @@ function App() {
     return bookings.filter((booking) => booking.departure > today);
   }, [bookings]);
   const visibleMonths = useMemo(() => [calendarMonth, new Date(Date.UTC(calendarMonth.getUTCFullYear(), calendarMonth.getUTCMonth() + 1, 1))], [calendarMonth]);
+  const priceSummary = useMemo(() => {
+    if (!arrival || !departure) return undefined;
+    const start = new Date(`${arrival}T00:00:00Z`);
+    const end = new Date(`${departure}T00:00:00Z`);
+    if (!Number.isFinite(start.getTime()) || end <= start) return undefined;
+    let nights = 0;
+    let accommodation = 0;
+    for (const date = new Date(start); date < end; date.setUTCDate(date.getUTCDate() + 1)) {
+      nights += 1;
+      accommodation += nightlyRate(date);
+    }
+    return { nights, total: accommodation + 120 };
+  }, [arrival, departure]);
 
   const loadMedia = async () => {
     try {
@@ -189,6 +216,21 @@ function App() {
 
   const submitBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const errors: { arrival?: string; departure?: string } = {};
+    if (!arrival) errors.arrival = "Bitte wählen Sie ein Anreisedatum.";
+    if (!departure) errors.departure = "Bitte wählen Sie ein Abreisedatum.";
+    if (arrival && departure && departure <= arrival) errors.departure = "Die Abreise muss nach der Anreise liegen.";
+    if (priceSummary && priceSummary.nights < 5) errors.departure = "Der Mindestaufenthalt beträgt 5 Nächte.";
+    setBookingErrors(errors);
+    if (Object.keys(errors).length) {
+      trackEvent("booking_validation_failed", { field: errors.arrival ? "arrival" : "departure" });
+      return;
+    }
+    if (!event.currentTarget.checkValidity()) {
+      event.currentTarget.reportValidity();
+      trackEvent("booking_validation_failed", { field: "contact" });
+      return;
+    }
     setBookingBusy(true);
     setBookingStatus("");
     const form = event.currentTarget;
@@ -198,9 +240,13 @@ function App() {
       const result = await response.json() as { message?: string };
       if (!response.ok) throw new Error(result.message ?? "Die Anfrage konnte nicht gesendet werden.");
       setBookingStatus("Vielen Dank! Wir haben Ihre Anfrage erhalten und melden uns persönlich bei Ihnen.");
+      trackEvent("booking_inquiry_success");
       form.reset();
+      setArrival("");
+      setDeparture("");
       await loadPublicBookings();
     } catch (error) {
+      trackEvent("booking_inquiry_failed");
       setBookingStatus(error instanceof Error ? error.message : "Die Anfrage konnte nicht gesendet werden.");
     } finally {
       setBookingBusy(false);
@@ -348,6 +394,7 @@ function App() {
           <span className="brand-mark">CB</span>
           <span className="brand-copy"><strong>Casa Baia Sant’Anna</strong><small>Sardegna</small></span>
         </a>
+        {!isImpressum && !isDatenschutz && <a className="header-cta" href="#anfrage" onClick={() => trackEvent("cta_click", { placement: "header" })}>Verfügbarkeit prüfen</a>}
         <button className="menu-button" onClick={() => setMenuOpen(true)} aria-label="Menü öffnen">
           <span>Menü</span><i /><i />
         </button>
@@ -357,7 +404,7 @@ function App() {
 
       <div className={`menu-panel ${menuOpen ? "is-open" : ""}`} aria-hidden={!menuOpen}>
         <button className="close-button" onClick={() => setMenuOpen(false)} aria-label="Menü schließen">Schließen <span>×</span></button>
-        <nav>{links.map((link, i) => <a key={link} href={["/#home", "/#casa", "/#galerie", "/#lage", "/#preise"][i]} onClick={() => setMenuOpen(false)}><small>0{i + 1}</small>{link}</a>)}</nav>
+        <nav>{links.map((link, i) => <a key={link} href={["/#home", "/#casa", "/#galerie", "/#lage", "/#preise"][i]} onClick={() => setMenuOpen(false)}><small>0{i + 1}</small>{link}</a>)}<a className="menu-cta" href="/#anfrage" onClick={() => { setMenuOpen(false); trackEvent("cta_click", { placement: "menu" }); }}><small>06</small>Aufenthalt anfragen</a></nav>
         <p>Sardinien, Italien<br />info@casa-baia-sant-anna.com</p>
       </div>
 
@@ -438,6 +485,15 @@ function App() {
           <p className="hero-note">40° 42' N<br />9° 43' E</p>
         </section>
 
+        <nav className="quick-facts" aria-label="Die Casa auf einen Blick">
+          <a href="#casa"><span>Gäste</span><strong>Bis 4 Personen</strong></a>
+          <a href="#casa"><span>Schlafen</span><strong>2 Schlafzimmer</strong></a>
+          <a href="#casa"><span>Komfort</span><strong>1 Bad · Privatpool</strong></a>
+          <a href="#lage"><span>Strand</span><strong>Wenige Minuten zu Fuß</strong></a>
+          <a href="#lage"><span>Lage</span><strong>Baia Sant’Anna</strong></a>
+          <a href="#preise"><span>Preis</span><strong>Ab € 120 / Nacht</strong></a>
+        </nav>
+
         <section className="welcome" id="entdecken">
           <div className="section-number">01 <span /></div>
           <div className="welcome-heading">
@@ -512,6 +568,7 @@ function App() {
               <div><h3>Zugang &amp; Parken</h3><p>Das Grundstück ist mit einem abschließbaren Tor gesichert. Dahinter befindet sich der Pkw-Stellplatz; weitere Parkmöglichkeiten liegen direkt am Grundstück.</p></div>
             </article>
           </div>
+          <div className="section-cta"><a href="#anfrage" onClick={() => trackEvent("cta_click", { placement: "casa" })}>Aufenthalt anfragen <span>→</span></a></div>
         </section>
         <section className="gallery-section" id="galerie">
           <div className="gallery-intro">
@@ -520,11 +577,12 @@ function App() {
             <p>Ein Haus zwischen Himmel und Macchia. Entdecken Sie die stillen Ecken, das warme Licht und den Blick auf Sardiniens Küste.</p>
           </div>
           <div className="gallery-grid">
-            {gallery.map((photo, index) => <button className={`gallery-card ${photo.className ?? ""}`} key={photo.id} onClick={() => setActivePhoto(index)} aria-label={`${photo.title} vergrößern`}>
+            {gallery.map((photo, index) => <button className={`gallery-card ${photo.className ?? ""}`} key={photo.id} onClick={() => { setActivePhoto(index); trackEvent("gallery_open", { index: index + 1 }); }} aria-label={`${photo.title} vergrößern`}>
               <img src={photo.src} style={{ objectPosition: photo.position }} alt={photo.title} loading="lazy" />
               <span className="gallery-overlay"><small>{String(index + 1).padStart(2, "0")}</small><b>＋</b></span>
             </button>)}
           </div>
+          <div className="section-cta"><a href="#anfrage" onClick={() => trackEvent("cta_click", { placement: "gallery" })}>Verfügbarkeit prüfen <span>→</span></a></div>
         </section>
 
         <section className="location-section" id="lage" aria-labelledby="location-title">
@@ -554,7 +612,7 @@ function App() {
           </div>
 
           <figure className="location-map">
-            <a className="location-map-link" href={googleMapsUrl} target="_blank" rel="noreferrer" aria-label="Position der Casa in Google Maps öffnen">
+            <a className="location-map-link" href={googleMapsUrl} target="_blank" rel="noreferrer" aria-label="Position der Casa in Google Maps öffnen" onClick={() => trackEvent("map_click")}>
               <img src={locationMapImage} alt="Illustrierte Lagekarte der Casa Baia Sant’Anna bei den Koordinaten 40.6855258 Nord und 9.7383962 Ost" loading="lazy" />
             </a>
             <figcaption>
@@ -574,6 +632,7 @@ function App() {
               <ul>{activities.map((activity) => <li key={activity}>{activity}</li>)}</ul>
             </div>
           </div>
+          <div className="section-cta section-cta-light"><a href="#anfrage" onClick={() => trackEvent("cta_click", { placement: "location" })}>Aufenthalt anfragen <span>→</span></a></div>
         </section>
 
         <section className="prices-section" id="preise" aria-labelledby="prices-title">
@@ -599,22 +658,24 @@ function App() {
             </div>
             <div className="calendar-months">{visibleMonths.map((month) => <BookingMonth month={month} bookings={activeBookings} key={month.toISOString()} />)}</div>
             <div className="calendar-footer">
-              <div className="calendar-legend" aria-label="Kalenderlegende"><span><i className="is-requested" />Angefragt</span><span><i className="is-reserved" />Reserviert</span><span><i className="is-booked" />Gebucht</span><span><i />Verfügbar</span></div>
+              <div className="calendar-legend" aria-label="Kalenderlegende"><span><i />Verfügbar</span><span><i className="is-unavailable" />Nicht verfügbar</span></div>
               <button className="manage-bookings-button" type="button" onClick={openBookingManager}>Buchungen verwalten <span>→</span></button>
             </div>
           </div>
-          <div className="booking-layout">
+          <div className="booking-layout" id="anfrage">
             <div className="availability-copy">
               <p className="eyebrow dark">Verfügbarkeit</p>
               <h3>Ihre Auszeit<br /><em>anfragen.</em></h3>
-              <p>Reservierte und gebuchte Zeiträume werden bei der Auswahl automatisch geprüft. Mehrere unverbindliche Anfragen für denselben Zeitraum sind möglich.</p>
-              {activeBookings.length > 0 && <div className="occupied-dates"><strong>Aktuelle Belegung &amp; Anfragen</strong>{activeBookings.map((range, index) => <span key={`${range.arrival}-${range.departure}-${index}`}><i className={`is-${range.status}`} />{new Date(`${range.arrival}T00:00:00`).toLocaleDateString("de-DE")} – {new Date(`${range.departure}T00:00:00`).toLocaleDateString("de-DE")} · {bookingStatusLabel(range.status)}</span>)}</div>}
+              <p>Ihre Anfrage ist unverbindlich. Wir prüfen den Zeitraum persönlich und antworten in der Regel innerhalb von 24 Stunden.</p>
+              <ol className="booking-steps"><li><span>1</span>Reisedaten wählen</li><li><span>2</span>Unverbindlich anfragen</li><li><span>3</span>Persönliche Bestätigung erhalten</li></ol>
+              <div className="booking-contact"><strong>Fragen vor der Buchung?</strong><a href="mailto:info@casa-baia-sant-anna.com">info@casa-baia-sant-anna.com</a><a href="tel:+4974134898934">+49 (0) 741 34898934</a></div>
             </div>
-            <form className="booking-form" onSubmit={submitBooking}>
-              <div className="form-row"><label>Anreise<input required name="arrival" type="date" min={new Date().toISOString().slice(0, 10)} /></label><label>Abreise<input required name="departure" type="date" min={new Date().toISOString().slice(0, 10)} /></label></div>
+            <form className="booking-form" onSubmit={submitBooking} onFocus={() => trackEvent("booking_form_start")} noValidate>
+              <div className="form-row"><label>Anreise<input required name="arrival" type="date" value={arrival} min={new Date().toISOString().slice(0, 10)} aria-describedby={bookingErrors.arrival ? "arrival-error" : undefined} aria-invalid={Boolean(bookingErrors.arrival)} onChange={(event) => { setArrival(event.target.value); setBookingErrors((current) => ({ ...current, arrival: undefined })); }} />{bookingErrors.arrival && <span className="field-error" id="arrival-error">{bookingErrors.arrival}</span>}</label><label>Abreise<input required name="departure" type="date" value={departure} min={arrival || new Date().toISOString().slice(0, 10)} aria-describedby={bookingErrors.departure ? "departure-error" : undefined} aria-invalid={Boolean(bookingErrors.departure)} onChange={(event) => { setDeparture(event.target.value); setBookingErrors((current) => ({ ...current, departure: undefined })); }} />{bookingErrors.departure && <span className="field-error" id="departure-error">{bookingErrors.departure}</span>}</label></div>
               <div className="form-row"><label>Name<input required name="name" autoComplete="name" /></label><label>E-Mail<input required name="email" type="email" autoComplete="email" /></label></div>
               <label>Gäste<select name="guests" defaultValue="2"><option value="1">1 Person</option><option value="2">2 Personen</option><option value="3">3 Personen</option><option value="4">4 Personen</option></select></label>
               <label>Nachricht (optional)<textarea name="message" rows={4} placeholder="Was dürfen wir über Ihre Reise wissen?" /></label>
+              <div className="price-summary" aria-live="polite"><strong>{priceSummary ? `Voraussichtlich € ${priceSummary.total.toLocaleString("de-DE")}` : "Preisübersicht"}</strong><span>{priceSummary ? `${priceSummary.nights} Nächte inklusive € 120 Endreinigung` : "Reisedaten wählen für eine unverbindliche Schätzung"}</span><small>Mindestaufenthalt 5 Nächte · keine Zahlung bei Anfrage</small></div>
               <p className="form-privacy-note">Hinweise zur Verarbeitung Ihrer Angaben finden Sie in unserer <a href="/datenschutz">Datenschutzerklärung</a>.</p>
               <button disabled={bookingBusy} type="submit">{bookingBusy ? "Wird gesendet …" : "Verfügbarkeit prüfen & anfragen"}<span>→</span></button>
               {bookingStatus && <p className="booking-status" role="status">{bookingStatus}</p>}
@@ -624,6 +685,8 @@ function App() {
 
 
       </main>}
+
+      {!isImpressum && !isDatenschutz && <a className="mobile-booking-cta" href="#anfrage" onClick={() => trackEvent("cta_click", { placement: "mobile_sticky" })}>Verfügbarkeit prüfen <span>→</span></a>}
 
       {activePhoto !== null && <div className="lightbox" role="dialog" aria-modal="true" aria-label="Bildergalerie" onClick={() => setActivePhoto(null)}>
         <button className="lightbox-close" onClick={() => setActivePhoto(null)} aria-label="Galerie schließen">Schließen <span>×</span></button>
