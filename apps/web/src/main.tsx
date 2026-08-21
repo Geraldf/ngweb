@@ -427,7 +427,7 @@ function App() {
     <>
       <header className="site-header">
         <a className="brand" href="/#home" aria-label="Casa Baia Sant’Anna – Startseite">
-          <span className="brand-mark">CB</span>
+          <BrandMark />
           <span className="brand-copy"><strong>CASA BAIA SANT’ANNA</strong><small>Sardegna</small></span>
         </a>
         {!isImpressum && !isDatenschutz && <a className="header-cta" href="#anfrage" onClick={() => trackEvent("cta_click", { placement: "header" })}>Verfügbarkeit prüfen</a>}
