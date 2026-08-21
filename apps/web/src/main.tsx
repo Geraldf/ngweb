@@ -5,6 +5,15 @@ import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-600.css";
 import "@fontsource/italiana/latin-400.css";
 import webPackage from "../package.json";
+
+function BrandMark() {
+  return (
+    <svg className="brand-mark" viewBox="0 0 269 105" aria-hidden="true">
+      <path d="M8 14c18 5 35 14 53 17 15 2 27-5 45-22 28 21 49 34 71 35 22 1 39-10 61-28 8-6 17 1 27 20" />
+      <path d="M5 79c24 7 47 5 77-13 25 13 42 25 60 25 19 0 35-11 57-22 16-4 26 19 42 26 6 3 12 3 19 3" />
+    </svg>
+  );
+}
 import ausstattungImage from "./assets/Ausstattung.jpg";
 import badezimmerImage from "./assets/BadeZimmer.jpeg";
 import locationMapImage from "./assets/casa-location-map.png";
@@ -802,7 +811,7 @@ function App() {
         </>}
       </div>}
 
-      <footer><a className="brand footer-brand" href="/#home"><span className="brand-mark">CB</span><span className="brand-copy"><strong>Casa Baia Sant’Anna</strong><small>Sardegna</small></span></a><p>© 2026 Casa Baia Sant’Anna</p><p>Version {webPackage.version}</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; <a href="/datenschutz">Datenschutz</a></p></footer>
+      <footer><a className="brand footer-brand" href="/#home"><BrandMark /><span className="brand-copy"><strong>Casa Baia Sant’Anna</strong><small>Sardegna</small></span></a><p>© 2026 Casa Baia Sant’Anna</p><p>Version {webPackage.version}</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; <a href="/datenschutz">Datenschutz</a></p></footer>
     </>
   );
 }
