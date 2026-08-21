@@ -419,7 +419,7 @@ function App() {
       <header className="site-header">
         <a className="brand" href="/#home" aria-label="Casa Baia Sant’Anna – Startseite">
           <span className="brand-mark">CB</span>
-          <span className="brand-copy"><strong>Casa Baia Sant’Anna</strong><small>Sardegna</small></span>
+          <span className="brand-copy"><strong>CASA BAIA SANT’ANNA</strong><small>Sardegna</small></span>
         </a>
         {!isImpressum && !isDatenschutz && <a className="header-cta" href="#anfrage" onClick={() => trackEvent("cta_click", { placement: "header" })}>Verfügbarkeit prüfen</a>}
         <button className="menu-button" onClick={() => setMenuOpen(true)} aria-label="Menü öffnen">
@@ -600,7 +600,7 @@ function App() {
         <section className="gallery-section" id="galerie">
           <div className="gallery-intro">
             <div className="section-number">03 <span /></div>
-            <div><p className="eyebrow dark">Impressionen</p><h2>Augenblicke<br /><em>am Meer.</em></h2></div>
+            <div><p className="eyebrow dark">Impressionen</p><h2>Augenblicke<br /><em>am Pool & Meer.</em></h2></div>
             <p>Ein Haus zwischen Himmel und Macchia. Entdecken Sie die stillen Ecken, das warme Licht und den Blick auf Sardiniens Küste.</p>
           </div>
           <div className="gallery-grid">
@@ -732,60 +732,60 @@ function App() {
           <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird geprüft …" : "Anmelden"}</button>
           {adminError && <p className="manager-error" role="alert">{adminError}</p>}
         </form> : <>
-        <nav className="manager-tabs" aria-label="Verwaltungsbereiche">
-          <button className={managerSection === "images" ? "is-active" : ""} onClick={() => setManagerSection("images")}>Bilder</button>
-          <button className={managerSection === "bookings" ? "is-active" : ""} onClick={() => { setManagerSection("bookings"); void loadAdminBookings(); }}>Buchungen</button>
-        </nav>
-        {managerSection === "images" && <><div className="manager-toolbar">
-          <label className={`upload-button ${uploading ? "is-busy" : ""}`}>
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={uploadImages} disabled={uploading} />
-            {uploading ? "Wird hochgeladen …" : "＋ Bilder hochladen"}
-          </label>
-          <p>JPEG, PNG, WebP oder GIF · maximal 10 MB</p>
-          <p className="order-hint">Reihenfolge mit ↑ und ↓ festlegen</p>
-        </div>
-        {mediaError && <p className="manager-error" role="alert">{mediaError}</p>}
-        {media.length === 0 ? <div className="manager-empty"><strong>Noch keine eigenen Bilder</strong><span>Geladene Bilder erscheinen hier und zunächst direkt in der Galerie.</span></div> :
-          <div className="media-list">{sortedMedia.map((item, index) => <article className="media-row" key={item.id}>
-            <span className="media-number" aria-label={`Bild Nummer ${index + 1}`}>{String(index + 1).padStart(2, "0")}</span>
-            <img src={`${apiBase}/uploads/${item.filename}`} alt="" />
-            <div className="media-fields">
-              <label>Bildtitel<input value={item.title} onChange={(event) => setMedia((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, title: event.target.value } : candidate))} onBlur={(event) => void updateMedia(item, { title: event.target.value })} /></label>
-              <label>Platzierung<select value={item.placement} onChange={(event) => void updateMedia(item, { placement: event.target.value as MediaItem["placement"] })}><option value="gallery">In der Galerie</option><option value="library">Nur Bibliothek</option></select></label>
-            </div>
-            <div className="media-actions">
-              <button disabled={index === 0} onClick={() => void moveMedia(item, -1)} aria-label={`${item.title} nach oben verschieben`}>↑</button>
-              <button disabled={index === sortedMedia.length - 1} onClick={() => void moveMedia(item, 1)} aria-label={`${item.title} nach unten verschieben`}>↓</button>
-              <button className="delete-button" onClick={() => void deleteMedia(item)}>Löschen</button>
-            </div>
-          </article>)}</div>}</>}
-        {managerSection === "bookings" && <div className="booking-manager">
-          <div className="booking-debug-toggle">
-            <label><input type="checkbox" checked={bookingDebug} onChange={(event) => setBookingDebug(event.target.checked)} /> Debug-Modus</label>
-            <span>Zeigt technische Details ohne Gästedaten.</span>
+          <nav className="manager-tabs" aria-label="Verwaltungsbereiche">
+            <button className={managerSection === "images" ? "is-active" : ""} onClick={() => setManagerSection("images")}>Bilder</button>
+            <button className={managerSection === "bookings" ? "is-active" : ""} onClick={() => { setManagerSection("bookings"); void loadAdminBookings(); }}>Buchungen</button>
+          </nav>
+          {managerSection === "images" && <><div className="manager-toolbar">
+            <label className={`upload-button ${uploading ? "is-busy" : ""}`}>
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={uploadImages} disabled={uploading} />
+              {uploading ? "Wird hochgeladen …" : "＋ Bilder hochladen"}
+            </label>
+            <p>JPEG, PNG, WebP oder GIF · maximal 10 MB</p>
+            <p className="order-hint">Reihenfolge mit ↑ und ↓ festlegen</p>
           </div>
-          {bookingDebug && <aside className="booking-debug-panel" aria-label="Buchungsdiagnose">
-            <div className="booking-debug-heading"><strong>Diagnose</strong><button type="button" onClick={() => setBookingDebugEntries([])}>Leeren</button></div>
-            <dl><div><dt>API</dt><dd>{apiBase || window.location.origin}</dd></div></dl>
-            {bookingDebugEntries.length === 0 ? <p>Noch keine Verwaltungsanfrage ausgeführt.</p> : <ol>{bookingDebugEntries.map((entry) => <li key={entry.id} className={typeof entry.status === "number" && entry.status >= 200 && entry.status < 300 ? "is-success" : "is-error"}>
-              <time>{entry.timestamp}</time><code>{entry.operation}</code><b>{entry.status}</b><span>{entry.message}</span>
-            </li>)}</ol>}
-          </aside>}
-          <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Wird geladen …" : "Buchungen neu laden"}</button>
-          {adminError && <p className="manager-error" role="alert">{adminError}</p>}
-          <form className="booking-create" onSubmit={createAdminBooking}>
-            <h3>Neue Buchung hinzufügen</h3>
-            <p className="booking-create-hint">Tragen Sie hier die Buchungsdaten ein. Bestehende Buchungen müssen vorher nicht geladen werden.</p>
-            <label>Anreise<input type="date" name="arrival" required /></label>
-            <label>Abreise<input type="date" name="departure" required /></label>
-            <label>Status<select name="status"><option value="requested">Angefragt</option><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
-            <label>Name<input name="name" required /></label>
-            <label>E-Mail<input name="email" type="email" required /></label>
-            <label>Gäste<input name="guests" type="number" min="1" max="4" defaultValue="2" required /></label>
-            <label className="booking-message-field">Nachricht<textarea name="message" rows={2} /></label>
-            <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird angelegt …" : "＋ Buchung hinzufügen"}</button>
-          </form>
-          {adminBookings.length > 0 ? <div className="admin-booking-list">{adminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
+            {mediaError && <p className="manager-error" role="alert">{mediaError}</p>}
+            {media.length === 0 ? <div className="manager-empty"><strong>Noch keine eigenen Bilder</strong><span>Geladene Bilder erscheinen hier und zunächst direkt in der Galerie.</span></div> :
+              <div className="media-list">{sortedMedia.map((item, index) => <article className="media-row" key={item.id}>
+                <span className="media-number" aria-label={`Bild Nummer ${index + 1}`}>{String(index + 1).padStart(2, "0")}</span>
+                <img src={`${apiBase}/uploads/${item.filename}`} alt="" />
+                <div className="media-fields">
+                  <label>Bildtitel<input value={item.title} onChange={(event) => setMedia((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, title: event.target.value } : candidate))} onBlur={(event) => void updateMedia(item, { title: event.target.value })} /></label>
+                  <label>Platzierung<select value={item.placement} onChange={(event) => void updateMedia(item, { placement: event.target.value as MediaItem["placement"] })}><option value="gallery">In der Galerie</option><option value="library">Nur Bibliothek</option></select></label>
+                </div>
+                <div className="media-actions">
+                  <button disabled={index === 0} onClick={() => void moveMedia(item, -1)} aria-label={`${item.title} nach oben verschieben`}>↑</button>
+                  <button disabled={index === sortedMedia.length - 1} onClick={() => void moveMedia(item, 1)} aria-label={`${item.title} nach unten verschieben`}>↓</button>
+                  <button className="delete-button" onClick={() => void deleteMedia(item)}>Löschen</button>
+                </div>
+              </article>)}</div>}</>}
+          {managerSection === "bookings" && <div className="booking-manager">
+            <div className="booking-debug-toggle">
+              <label><input type="checkbox" checked={bookingDebug} onChange={(event) => setBookingDebug(event.target.checked)} /> Debug-Modus</label>
+              <span>Zeigt technische Details ohne Gästedaten.</span>
+            </div>
+            {bookingDebug && <aside className="booking-debug-panel" aria-label="Buchungsdiagnose">
+              <div className="booking-debug-heading"><strong>Diagnose</strong><button type="button" onClick={() => setBookingDebugEntries([])}>Leeren</button></div>
+              <dl><div><dt>API</dt><dd>{apiBase || window.location.origin}</dd></div></dl>
+              {bookingDebugEntries.length === 0 ? <p>Noch keine Verwaltungsanfrage ausgeführt.</p> : <ol>{bookingDebugEntries.map((entry) => <li key={entry.id} className={typeof entry.status === "number" && entry.status >= 200 && entry.status < 300 ? "is-success" : "is-error"}>
+                <time>{entry.timestamp}</time><code>{entry.operation}</code><b>{entry.status}</b><span>{entry.message}</span>
+              </li>)}</ol>}
+            </aside>}
+            <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Wird geladen …" : "Buchungen neu laden"}</button>
+            {adminError && <p className="manager-error" role="alert">{adminError}</p>}
+            <form className="booking-create" onSubmit={createAdminBooking}>
+              <h3>Neue Buchung hinzufügen</h3>
+              <p className="booking-create-hint">Tragen Sie hier die Buchungsdaten ein. Bestehende Buchungen müssen vorher nicht geladen werden.</p>
+              <label>Anreise<input type="date" name="arrival" required /></label>
+              <label>Abreise<input type="date" name="departure" required /></label>
+              <label>Status<select name="status"><option value="requested">Angefragt</option><option value="reserved">Reserviert</option><option value="booked">Gebucht</option></select></label>
+              <label>Name<input name="name" required /></label>
+              <label>E-Mail<input name="email" type="email" required /></label>
+              <label>Gäste<input name="guests" type="number" min="1" max="4" defaultValue="2" required /></label>
+              <label className="booking-message-field">Nachricht<textarea name="message" rows={2} /></label>
+              <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird angelegt …" : "＋ Buchung hinzufügen"}</button>
+            </form>
+            {adminBookings.length > 0 ? <div className="admin-booking-list">{adminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
               <div className="admin-booking-heading"><strong>{booking.name}</strong><span className={`booking-badge is-${booking.status}`}>{bookingStatusLabel(booking.status)}</span></div>
               <div className="admin-booking-fields">
                 <label>Anreise<input type="date" value={booking.arrival} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, arrival: event.target.value } : item))} /></label>
@@ -798,7 +798,7 @@ function App() {
               </div>
               <div className="admin-booking-actions"><button disabled={adminBusy} onClick={() => void updateAdminBooking(booking)}>Speichern</button><button className="delete-button" disabled={adminBusy} onClick={() => void deleteAdminBooking(booking)}>Löschen</button></div>
             </article>)}</div> : <div className="manager-empty"><strong>Noch keine Buchungen</strong><span>Legen Sie die erste Buchung über das Formular an.</span></div>}
-        </div>}
+          </div>}
         </>}
       </div>}
 
