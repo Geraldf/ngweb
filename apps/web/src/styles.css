@@ -9,7 +9,8 @@ button { font: inherit; }
 
 .site-header { height: 112px; padding: 0 4vw; position: absolute; inset: 0 0 auto; z-index: 5; display: flex; align-items: center; justify-content: space-between; color: white; border-bottom: 1px solid rgba(255,255,255,.32); }
 .brand { display: flex; align-items: center; gap: 13px; }
-.brand-mark { width: 48px; height: 48px; display: grid; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-family: "Italiana", serif; font-size: 18px; }
+.brand-mark { width: 62px; height: auto; display: block; flex: 0 0 auto; overflow: visible; }
+.brand-mark path { fill: none; stroke: currentColor; stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; }
 .brand-copy { display: flex; flex-direction: column; line-height: 1; }
 .brand-copy strong { white-space: nowrap; font-family: "Italiana", serif; font-size: 22px; font-weight: 400; letter-spacing: .02em; }
 .brand-copy small { margin-top: 7px; font-size: 8px; text-transform: uppercase; letter-spacing: .28em; }
@@ -281,7 +282,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .site-header { height: 86px; padding: 0 24px; }
   .menu-button { top: 18px; right: 24px; }
   .manage-button { right: 24px; bottom: 20px; }
-  .brand-mark { width: 40px; height: 40px; font-size: 15px; }
+  .brand-mark { width: 52px; }
   .brand-copy strong { font-size: 15px; }
   .hero { min-height: 700px; }
   .hero-content { left: 24px; right: 24px; }

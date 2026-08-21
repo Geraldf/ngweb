@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="32" fill="#263127"/>
-  <text x="32" y="39" fill="#f3f0e8" font-family="Georgia,serif" font-size="21" text-anchor="middle">CB</text>
+  <rect width="64" height="64" rx="14" fill="#263127"/>
+  <g fill="none" stroke="#f3f0e8" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 18c8 3 13 5 18-1 8 7 14 10 21 6 5-3 8-7 11-3"/>
+    <path d="M6 41c8 3 14 1 20-3 8 5 14 7 21 2 6-4 8 4 12 4"/>
+  </g>
 </svg>
