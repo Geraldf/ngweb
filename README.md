@@ -60,6 +60,8 @@ Open **Inhalte verwalten**, enter the administration key configured in `ADMIN_TO
 
 The API accepts JPEG, PNG, WebP, and GIF files up to 10 MB. Image files and their metadata persist under `MEDIA_DATA_DIR` (`data/media` by default); mount or back up that directory in production.
 
+Migration imports may be up to 1 GB by default so that uploaded images can be transferred with the JSON data. Set `MIGRATION_IMPORT_LIMIT_MB` to change this limit for the available server memory and expected media library size.
+
 ## Booking management
 
 Open **Inhalte verwalten** and enter the administration key configured in `ADMIN_TOKEN` to create, view, edit, confirm, or delete bookings. Generate a strong production key, for example with `openssl rand -hex 32`, and provide it through the deployment environment rather than committing it to Git.

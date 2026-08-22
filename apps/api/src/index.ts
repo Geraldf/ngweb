@@ -42,6 +42,10 @@ type BookingFields = Omit<Booking, "id" | "createdAt">;
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
+const configuredMigrationImportLimitMb = Number(process.env.MIGRATION_IMPORT_LIMIT_MB ?? 1024);
+const migrationImportLimitMb = Number.isFinite(configuredMigrationImportLimitMb) && configuredMigrationImportLimitMb > 0
+  ? configuredMigrationImportLimitMb
+  : 1024;
 const dataDirectory = path.resolve(process.env.MEDIA_DATA_DIR ?? "data/media");
 const webDirectory = process.env.WEB_DIST_DIR ? path.resolve(process.env.WEB_DIST_DIR) : undefined;
 const filesDirectory = path.join(dataDirectory, "files");
@@ -84,7 +88,7 @@ app.get("/api/admin/migration/export", requireAdmin, async (_request, response, 
 app.post(
   "/api/admin/migration/import",
   requireAdmin,
-  express.raw({ type: "application/json", limit: "100mb" }),
+  express.raw({ type: "application/json", limit: `${migrationImportLimitMb}mb` }),
   async (request, response, next) => {
     let stagingDirectory: string | undefined;
     let backupDirectory: string | undefined;
@@ -534,7 +538,7 @@ if (webDirectory) {
 app.use((error: unknown, request: express.Request, response: express.Response, _next: express.NextFunction) => {
   console.error(error);
   if ((error as { type?: string }).type === "entity.too.large") {
-    response.status(413).json({ message: request.path.includes("/migration/import") ? "Migrationsdateien dürfen maximal 100 MB groß sein." : "Images may be up to 10 MB." });
+    response.status(413).json({ message: request.path.includes("/migration/import") ? `Migrationsdateien dürfen maximal ${migrationImportLimitMb} MB groß sein.` : "Images may be up to 10 MB." });
     return;
   }
   response.status(500).json({ message: "The media library could not be updated." });

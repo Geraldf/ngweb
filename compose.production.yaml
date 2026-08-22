@@ -8,6 +8,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       MEDIA_DATA_DIR: /app/data/media
+      MIGRATION_IMPORT_LIMIT_MB: "${MIGRATION_IMPORT_LIMIT_MB:-1024}"
       WEB_DIST_DIR: /app/apps/web/dist
       CLIENT_ORIGIN: "${CLIENT_ORIGIN:-http://localhost}"
       ADMIN_TOKEN: "${ADMIN_TOKEN:?Set ADMIN_TOKEN to a long random secret}"
