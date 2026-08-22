@@ -8,5 +8,6 @@ apps/api/data/media/bookings.json
 apps/api/data/media/media.json
 pnpm-lock.yaml
 apps/api/data/*
+/apps/api/data/media/*.json
 apps/api/data/media/bookings.json
 apps/api/data/media/media.json
