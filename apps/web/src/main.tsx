@@ -93,6 +93,7 @@ function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange
 }
 
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+const adminRequestTimeoutMs = 10_000;
 
 function trackEvent(name: string, detail: Record<string, string | number> = {}) {
   window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
@@ -179,10 +180,20 @@ function App() {
     }
   };
 
-  const authenticatedRequest = (url: string, init: RequestInit = {}) => fetch(url, {
-    ...init,
-    headers: { Authorization: `Bearer ${adminToken}`, ...init.headers },
-  });
+  const authenticatedRequest = async (url: string, init: RequestInit = {}) => {
+    try {
+      return await fetch(url, {
+        ...init,
+        headers: { Authorization: `Bearer ${adminToken}`, ...init.headers },
+        signal: init.signal ?? AbortSignal.timeout(adminRequestTimeoutMs),
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "TimeoutError") {
+        throw new Error("Der Server antwortet nicht. Bitte versuchen Sie es erneut.");
+      }
+      throw error;
+    }
+  };
 
   const adminRequest = async (path = "", init: RequestInit = {}) => {
     const operation = `${init.method ?? "GET"} /api/admin/bookings${path}`;
