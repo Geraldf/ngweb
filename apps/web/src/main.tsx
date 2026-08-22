@@ -94,6 +94,7 @@ function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange
 
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 const adminRequestTimeoutMs = 10_000;
+const migrationRequestTimeoutMs = 5 * 60_000;
 
 function trackEvent(name: string, detail: Record<string, string | number> = {}) {
   window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
@@ -181,14 +182,15 @@ function App() {
   };
 
   const authenticatedRequest = async (url: string, init: RequestInit = {}) => {
+    const signal = init.signal ?? AbortSignal.timeout(adminRequestTimeoutMs);
     try {
       return await fetch(url, {
         ...init,
         headers: { Authorization: `Bearer ${adminToken}`, ...init.headers },
-        signal: init.signal ?? AbortSignal.timeout(adminRequestTimeoutMs),
+        signal,
       });
     } catch (error) {
-      if (error instanceof DOMException && error.name === "TimeoutError") {
+      if (signal.aborted) {
         throw new Error("Der Server antwortet nicht. Bitte versuchen Sie es erneut.");
       }
       throw error;
@@ -440,7 +442,9 @@ function App() {
     setMigrationBusy(true);
     setMigrationStatus("");
     try {
-      const response = await authenticatedRequest(`${apiBase}/api/admin/migration/export`);
+      const response = await authenticatedRequest(`${apiBase}/api/admin/migration/export`, {
+        signal: AbortSignal.timeout(migrationRequestTimeoutMs),
+      });
       if (!response.ok) throw new Error((await response.json() as { message?: string }).message ?? "Export fehlgeschlagen.");
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
@@ -470,6 +474,7 @@ function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: file,
+        signal: AbortSignal.timeout(migrationRequestTimeoutMs),
       });
       const result = await response.json() as { message?: string; migrationVersion?: number; jsonFiles?: number; files?: number };
       if (!response.ok) throw new Error(result.message ?? "Import fehlgeschlagen.");
