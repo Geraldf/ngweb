@@ -96,6 +96,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .gallery-intro > p { max-width: 380px; margin: 0 0 8px; color: #666a61; font-size: 13px; line-height: 1.9; }
 .gallery-grid { max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; align-items: start; }
 .gallery-card { position: relative; align-self: start; padding: 0; border: 0; overflow: hidden; background: #293229; color: white; cursor: zoom-in; text-align: left; }
+.gallery-card.portrait { width: min(70%, 460px); justify-self: center; }
 .gallery-card.wide { grid-column: span 2; }
 .gallery-card.tall { grid-row: span 2; }
 .gallery-card img { width: 100%; height: auto; display: block; transition: transform .8s cubic-bezier(.2,.7,.2,1); }
@@ -414,6 +415,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .section-cta a { width: 100%; justify-content: space-between; }
   .gallery-grid { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; }
   .gallery-card, .gallery-card.tall { flex: 0 0 82vw; height: auto; margin: 0; scroll-snap-align: start; }
+  .gallery-card.portrait { flex-basis: 62vw; }
   .calendar-months .booking-month:nth-child(n+2) { display: none; }
   .calendar-day { font-size: 13px; }
   .mobile-booking-cta { position: fixed; z-index: 40; left: 12px; right: 12px; bottom: 10px; min-height: 54px; padding: 0 20px; background: #263127; color: white; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 600; box-shadow: 0 10px 35px rgba(20,25,20,.35); }

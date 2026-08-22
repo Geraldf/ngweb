@@ -110,6 +110,7 @@ function App() {
   const isDatenschutz = window.location.pathname.replace(/\/$/, "") === "/datenschutz";
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePhoto, setActivePhoto] = useState<number | null>(null);
+  const [portraitPhotoIds, setPortraitPhotoIds] = useState<Set<string>>(() => new Set());
   const [managerOpen, setManagerOpen] = useState(false);
   const [managerSection, setManagerSection] = useState<"images" | "bookings" | "migration">("images");
   const [media, setMedia] = useState<MediaItem[]>([]);
@@ -675,8 +676,12 @@ function App() {
             <p>Ein Haus zwischen Himmel und Macchia. Entdecken Sie die stillen Ecken, das warme Licht und den Blick auf Sardiniens Küste.</p>
           </div>
           <div className="gallery-grid">
-            {gallery.map((photo, index) => <button className={`gallery-card ${photo.className ?? ""}`} key={photo.id} onClick={() => { setActivePhoto(index); trackEvent("gallery_open", { index: index + 1 }); }} aria-label={`${photo.title} vergrößern`}>
-              <img src={photo.src} style={{ objectPosition: photo.position }} alt={photo.title} loading="lazy" />
+            {gallery.map((photo, index) => <button className={`gallery-card ${portraitPhotoIds.has(photo.id) ? "portrait" : ""} ${photo.className ?? ""}`} key={photo.id} onClick={() => { setActivePhoto(index); trackEvent("gallery_open", { index: index + 1 }); }} aria-label={`${photo.title} vergrößern`}>
+              <img src={photo.src} style={{ objectPosition: photo.position }} alt={photo.title} loading="lazy" onLoad={({ currentTarget }) => {
+                if (currentTarget.naturalHeight > currentTarget.naturalWidth) {
+                  setPortraitPhotoIds((current) => current.has(photo.id) ? current : new Set(current).add(photo.id));
+                }
+              }} />
               <span className="gallery-overlay"><small>{String(index + 1).padStart(2, "0")}</small><b>＋</b></span>
             </button>)}
           </div>
