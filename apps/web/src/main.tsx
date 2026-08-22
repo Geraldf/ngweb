@@ -109,7 +109,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activePhoto, setActivePhoto] = useState<number | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
-  const [managerSection, setManagerSection] = useState<"images" | "bookings">("images");
+  const [managerSection, setManagerSection] = useState<"images" | "bookings" | "migration">("images");
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [mediaError, setMediaError] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -128,6 +128,8 @@ function App() {
   const [adminBookings, setAdminBookings] = useState<AdminBooking[]>([]);
   const [adminError, setAdminError] = useState("");
   const [adminBusy, setAdminBusy] = useState(false);
+  const [migrationBusy, setMigrationBusy] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState("");
   const [bookingDebug, setBookingDebug] = useState(false);
   const [bookingDebugEntries, setBookingDebugEntries] = useState<BookingDebugEntry[]>([]);
 
@@ -420,6 +422,53 @@ function App() {
       setAdminError(error instanceof Error ? error.message : "Buchung konnte nicht gelöscht werden.");
     } finally {
       setAdminBusy(false);
+    }
+  };
+
+  const exportMigration = async () => {
+    setMigrationBusy(true);
+    setMigrationStatus("");
+    try {
+      const response = await authenticatedRequest(`${apiBase}/api/admin/migration/export`);
+      if (!response.ok) throw new Error((await response.json() as { message?: string }).message ?? "Export fehlgeschlagen.");
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `casa-baia-migration-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setMigrationStatus("Export wurde heruntergeladen.");
+    } catch (error) {
+      setMigrationStatus(error instanceof Error ? error.message : "Export fehlgeschlagen.");
+    } finally {
+      setMigrationBusy(false);
+    }
+  };
+
+  const importMigration = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!window.confirm("Der Import ersetzt alle aktuellen Buchungen, Bilddaten und hochgeladenen Bilder. Fortfahren?")) {
+      event.target.value = "";
+      return;
+    }
+    setMigrationBusy(true);
+    setMigrationStatus("");
+    try {
+      const response = await authenticatedRequest(`${apiBase}/api/admin/migration/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: file,
+      });
+      const result = await response.json() as { message?: string; migrationVersion?: number; jsonFiles?: number; files?: number };
+      if (!response.ok) throw new Error(result.message ?? "Import fehlgeschlagen.");
+      await Promise.all([loadMedia(), loadPublicBookings(), loadAdminBookings()]);
+      setMigrationStatus(`${result.message} Version ${result.migrationVersion} · ${result.jsonFiles} JSON-Dateien · ${result.files} Bilder/Dateien`);
+    } catch (error) {
+      setMigrationStatus(error instanceof Error ? error.message : "Import fehlgeschlagen.");
+    } finally {
+      setMigrationBusy(false);
+      event.target.value = "";
     }
   };
 
@@ -744,6 +793,7 @@ function App() {
           <nav className="manager-tabs" aria-label="Verwaltungsbereiche">
             <button className={managerSection === "images" ? "is-active" : ""} onClick={() => setManagerSection("images")}>Bilder</button>
             <button className={managerSection === "bookings" ? "is-active" : ""} onClick={() => { setManagerSection("bookings"); void loadAdminBookings(); }}>Buchungen</button>
+            <button className={managerSection === "migration" ? "is-active" : ""} onClick={() => setManagerSection("migration")}>Migration</button>
           </nav>
           {managerSection === "images" && <><div className="manager-toolbar">
             <label className={`upload-button ${uploading ? "is-busy" : ""}`}>
@@ -808,6 +858,24 @@ function App() {
               <div className="admin-booking-actions"><button disabled={adminBusy} onClick={() => void updateAdminBooking(booking)}>Speichern</button><button className="delete-button" disabled={adminBusy} onClick={() => void deleteAdminBooking(booking)}>Löschen</button></div>
             </article>)}</div> : <div className="manager-empty"><strong>Noch keine Buchungen</strong><span>Legen Sie die erste Buchung über das Formular an.</span></div>}
           </div>}
+          {managerSection === "migration" && <section className="migration-manager">
+            <div>
+              <p className="eyebrow">Datensicherung</p>
+              <h3>Instanz exportieren</h3>
+              <p>Lädt alle JSON-Daten und hochgeladenen Bilder als eine versionierte Migrationsdatei herunter.</p>
+              <button type="button" disabled={migrationBusy} onClick={() => void exportMigration()}>{migrationBusy ? "Bitte warten …" : "Migration exportieren"}</button>
+            </div>
+            <div>
+              <p className="eyebrow">Wiederherstellung</p>
+              <h3>Instanz importieren</h3>
+              <p>Ersetzt die Daten dieser Instanz vollständig. Der Import ist nur mit derselben Migrationsversion möglich.</p>
+              <label className={`migration-import ${migrationBusy ? "is-busy" : ""}`}>
+                <input type="file" accept="application/json,.json" disabled={migrationBusy} onChange={importMigration} />
+                Migrationsdatei auswählen
+              </label>
+            </div>
+            {migrationStatus && <p className="migration-status" role="status">{migrationStatus}</p>}
+          </section>}
         </>}
       </div>}
 
