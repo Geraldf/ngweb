@@ -94,6 +94,7 @@ function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange
 
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 const adminRequestTimeoutMs = 10_000;
+const migrationImportTimeoutMs = 120_000;
 
 function trackEvent(name: string, detail: Record<string, string | number> = {}) {
   window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
@@ -470,6 +471,7 @@ function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: file,
+        signal: AbortSignal.timeout(migrationImportTimeoutMs),
       });
       const result = await response.json() as { message?: string; migrationVersion?: number; jsonFiles?: number; files?: number };
       if (!response.ok) throw new Error(result.message ?? "Import fehlgeschlagen.");
