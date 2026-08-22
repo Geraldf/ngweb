@@ -94,11 +94,11 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .gallery-intro h2 { margin: 0; font-family: "Italiana", serif; font-size: clamp(55px, 6.4vw, 98px); font-weight: 400; line-height: .95; letter-spacing: -.03em; }
 .gallery-intro h2 em { color: #828775; font-weight: 400; }
 .gallery-intro > p { max-width: 380px; margin: 0 0 8px; color: #666a61; font-size: 13px; line-height: 1.9; }
-.gallery-grid { max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 360px; gap: 18px; }
-.gallery-card { position: relative; padding: 0; border: 0; overflow: hidden; background: #293229; color: white; cursor: zoom-in; text-align: left; }
+.gallery-grid { max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; align-items: start; }
+.gallery-card { position: relative; align-self: start; padding: 0; border: 0; overflow: hidden; background: #293229; color: white; cursor: zoom-in; text-align: left; }
 .gallery-card.wide { grid-column: span 2; }
 .gallery-card.tall { grid-row: span 2; }
-.gallery-card img { width: 100%; height: 100%; display: block; object-fit: cover; transition: transform .8s cubic-bezier(.2,.7,.2,1); }
+.gallery-card img { width: 100%; height: auto; display: block; transition: transform .8s cubic-bezier(.2,.7,.2,1); }
 .gallery-card:hover img { transform: scale(1.035); }
 .location-section { padding: 145px 5vw 160px; background: #697261; color: #f3f0e8; }
 .location-intro { max-width: 1320px; margin: 0 auto 100px; display: grid; grid-template-columns: 12% 43% 1fr; gap: 5%; }
@@ -201,7 +201,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .lightbox { position: fixed; z-index: 50; inset: 0; padding: 70px 8vw 45px; background: rgba(25,32,26,.97); color: white; display: grid; grid-template-columns: 60px 1fr 60px; align-items: center; animation: fade-in .25s ease; }
 @keyframes fade-in { from { opacity: 0; } }
 .lightbox figure { height: min(76vh, 850px); margin: 0; display: flex; flex-direction: column; }
-.lightbox figure img { min-height: 0; width: 100%; flex: 1; object-fit: cover; }
+.lightbox figure img { min-width: 0; min-height: 0; width: 100%; height: 100%; flex: 1; object-fit: contain; }
 .lightbox figcaption { padding-top: 18px; font-family: "Italiana", serif; font-size: 22px; }
 .lightbox figcaption span { margin-right: 25px; font-family: "DM Sans", sans-serif; font-size: 8px; letter-spacing: .2em; }
 .lightbox-close { position: absolute; right: 4vw; top: 25px; color: inherit; border: 0; background: none; text-transform: uppercase; letter-spacing: .18em; font-size: 9px; cursor: pointer; }
@@ -314,8 +314,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .gallery-intro .section-number { margin-bottom: 45px; }
   .gallery-intro > p { margin-top: 35px; }
   .gallery-grid { display: block; }
-  .gallery-card { width: 100%; height: 330px; margin-bottom: 14px; }
-  .gallery-card.tall { height: 480px; }
+  .gallery-card, .gallery-card.tall { width: 100%; height: auto; margin-bottom: 14px; }
   .location-section { padding: 95px 24px 100px; }
   .location-intro { margin-bottom: 70px; display: block; }
   .location-intro .section-number { margin-bottom: 45px; }
@@ -414,7 +413,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .section-cta { margin-top: 38px; justify-content: stretch; }
   .section-cta a { width: 100%; justify-content: space-between; }
   .gallery-grid { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; }
-  .gallery-card, .gallery-card.tall { flex: 0 0 82vw; height: 300px; margin: 0; scroll-snap-align: start; }
+  .gallery-card, .gallery-card.tall { flex: 0 0 82vw; height: auto; margin: 0; scroll-snap-align: start; }
   .calendar-months .booking-month:nth-child(n+2) { display: none; }
   .calendar-day { font-size: 13px; }
   .mobile-booking-cta { position: fixed; z-index: 40; left: 12px; right: 12px; bottom: 10px; min-height: 54px; padding: 0 20px; background: #263127; color: white; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 600; box-shadow: 0 10px 35px rgba(20,25,20,.35); }
