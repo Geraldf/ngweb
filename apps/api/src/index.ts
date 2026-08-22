@@ -8,6 +8,8 @@ import path from "node:path";
 dotenv.config({ path: path.resolve(import.meta.dirname, "../../../.env") });
 
 const DATA_MIGRATION_VERSION = 1;
+const MIGRATION_IMPORT_LIMIT = "500mb";
+const MIGRATION_IMPORT_LIMIT_LABEL = "500 MB";
 
 type MigrationPackage = {
   migrationVersion: number;
@@ -84,7 +86,7 @@ app.get("/api/admin/migration/export", requireAdmin, async (_request, response, 
 app.post(
   "/api/admin/migration/import",
   requireAdmin,
-  express.raw({ type: "application/json", limit: "100mb" }),
+  express.raw({ type: "application/json", limit: MIGRATION_IMPORT_LIMIT }),
   async (request, response, next) => {
     let stagingDirectory: string | undefined;
     let backupDirectory: string | undefined;
@@ -534,7 +536,7 @@ if (webDirectory) {
 app.use((error: unknown, request: express.Request, response: express.Response, _next: express.NextFunction) => {
   console.error(error);
   if ((error as { type?: string }).type === "entity.too.large") {
-    response.status(413).json({ message: request.path.includes("/migration/import") ? "Migrationsdateien dürfen maximal 100 MB groß sein." : "Images may be up to 10 MB." });
+    response.status(413).json({ message: request.path.includes("/migration/import") ? `Migrationsdateien dürfen maximal ${MIGRATION_IMPORT_LIMIT_LABEL} groß sein.` : "Images may be up to 10 MB." });
     return;
   }
   response.status(500).json({ message: "The media library could not be updated." });

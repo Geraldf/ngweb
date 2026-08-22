@@ -94,7 +94,7 @@ function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange
 
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 const adminRequestTimeoutMs = 10_000;
-const migrationImportTimeoutMs = 120_000;
+const migrationImportTimeoutMs = 10 * 60_000;
 
 function trackEvent(name: string, detail: Record<string, string | number> = {}) {
   window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
