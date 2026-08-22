@@ -1,9 +1,11 @@
-import "dotenv/config";
 import cors from "cors";
+import dotenv from "dotenv";
 import express from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { access, mkdir, mkdtemp, readFile, readdir, rename, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+
+dotenv.config({ path: path.resolve(import.meta.dirname, "../../../.env") });
 
 const DATA_MIGRATION_VERSION = 1;
 
