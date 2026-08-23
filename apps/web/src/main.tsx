@@ -99,7 +99,6 @@ const migrationImportTimeoutMs = 10 * 60_000;
 const minimumStayNights = 10;
 const cleaningFee = 150;
 const laundryFeePerGuest = 25;
-const checkInOutFee = 80;
 
 function trackEvent(name: string, detail: Record<string, string | number> = {}) {
   window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
@@ -166,7 +165,7 @@ function App() {
       accommodation += nightlyRate(date);
     }
     const laundry = guests * laundryFeePerGuest;
-    return { nights, accommodation, laundry, total: accommodation + cleaningFee + laundry + checkInOutFee };
+    return { nights, accommodation, laundry, total: accommodation + cleaningFee + laundry };
   }, [arrival, departure, guests]);
   const minimumDeparture = useMemo(() => {
     if (!arrival) return "";
@@ -772,7 +771,7 @@ function App() {
             <article><small>April – Juni · Oktober</small><h3>€ 160</h3><p>pro Nacht · Zwischensaison</p></article>
             <article><small>Juli – September</small><h3>€ 210</h3><p>pro Nacht · Hauptsaison</p></article>
           </div>
-          <p className="price-note">Mindestaufenthalt 10 Nächte · Endreinigung € 150 · Wäschepaket € 25 pro Person · Check-in/Check-out € 80 · Die Übernachtungspreise gelten für das gesamte Haus.</p>
+          <p className="price-note">Mindestaufenthalt 10 Nächte · Endreinigung € 150 · Wäschepaket € 25 pro Person · Die Übernachtungspreise gelten für das gesamte Haus.</p>
           <div className="booking-calendar" aria-labelledby="calendar-title">
             <div className="calendar-header">
               <div><p className="eyebrow dark">Belegungskalender</p><h3 id="calendar-title">Verfügbarkeit<br /><em>auf einen Blick.</em></h3></div>
@@ -801,7 +800,7 @@ function App() {
               <div className="form-row"><label>Name<input required name="name" autoComplete="name" /></label><label>E-Mail<input required name="email" type="email" autoComplete="email" /></label></div>
               <label>Gäste<select name="guests" value={guests} onChange={(event) => setGuests(Number(event.target.value))}><option value="1">1 Person</option><option value="2">2 Personen</option><option value="3">3 Personen</option><option value="4">4 Personen</option></select></label>
               <label>Nachricht (optional)<textarea name="message" rows={4} placeholder="Was dürfen wir über Ihre Reise wissen?" /></label>
-              <div className="price-summary" aria-live="polite"><strong>{priceSummary ? `Voraussichtlich € ${priceSummary.total.toLocaleString("de-DE")}` : "Preisübersicht"}</strong><span>{priceSummary ? `${priceSummary.nights} Nächte € ${priceSummary.accommodation.toLocaleString("de-DE")} · Endreinigung € ${cleaningFee} · Wäschepaket € ${priceSummary.laundry} · Check-in/Check-out € ${checkInOutFee}` : "Reisedaten wählen für eine unverbindliche Schätzung"}</span><small>Mindestaufenthalt 10 Nächte · keine Zahlung bei Anfrage</small></div>
+              <div className="price-summary" aria-live="polite"><strong>{priceSummary ? `Voraussichtlich € ${priceSummary.total.toLocaleString("de-DE")}` : "Preisübersicht"}</strong><span>{priceSummary ? `${priceSummary.nights} Nächte € ${priceSummary.accommodation.toLocaleString("de-DE")} · Endreinigung € ${cleaningFee} · Wäschepaket € ${priceSummary.laundry}` : "Reisedaten wählen für eine unverbindliche Schätzung"}</span><small>Mindestaufenthalt 10 Nächte · keine Zahlung bei Anfrage</small></div>
               <p className="form-privacy-note">Hinweise zur Verarbeitung Ihrer Angaben finden Sie in unserer <a href="/datenschutz">Datenschutzerklärung</a>.</p>
               <button disabled={bookingBusy} type="submit">{bookingBusy ? "Wird gesendet …" : "Verfügbarkeit prüfen & anfragen"}<span>→</span></button>
               {bookingStatus && <p className="booking-status" role="status">{bookingStatus}</p>}
