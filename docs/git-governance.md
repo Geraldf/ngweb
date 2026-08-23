@@ -1,29 +1,44 @@
-# Git task governance
+# Git change workflow
 
-Every task is isolated on its own branch and ends with a task-specific completion commit.
-
-## Start a task
-
-Begin from a clean base branch, then run:
-
-```sh
-npm run task:start -- FUC-17 "Add contact form"
-```
-
-This creates `task/FUC-17-add-contact-form`. One task must not share a branch with another task.
-
-## Complete a task
-
-After implementing and verifying the work, run:
-
-```sh
-npm run task:complete -- "Add contact form"
-```
-
-This stages the task changes and creates `FUC-17: Add contact form completed`. The commit hook rejects commits that are not on a correctly named task branch or do not use the completion-message convention.
+Every change is isolated on a typed branch and committed with a Conventional Commit message.
 
 ## One-time setup
 
-Run `npm run governance:install` after cloning. This configures Git to use the version-controlled hooks in `.githooks`.
+Install the tracked hooks after cloning:
 
-The workflow guarantees one branch and at least one completion commit per task in a configured clone. Repository branch protection should additionally require pull requests before merging task branches into the default branch.
+```sh
+npm run git:install-hooks
+```
+
+The pre-commit hook blocks commits on `main` and `master`, validates branch names, and checks staged whitespace. The commit-message hook enforces the required format and the 72-character limit.
+
+## Start a change
+
+Begin on a clean `main` or `master` branch, then run:
+
+```sh
+npm run git:start -- feat "add contact form"
+```
+
+This fast-forwards the base branch and creates `feat/add-contact-form`. Valid types are `feat`, `fix`, `docs`, and `refactor`.
+
+## Check a change
+
+Review and verify the work before committing:
+
+```sh
+npm run git:check
+git diff
+```
+
+The check runs type checking and production builds for both workspaces.
+
+## Commit explicit files
+
+Pass the commit message followed by every file that belongs in the commit:
+
+```sh
+npm run git:commit -- "feat(contact): add contact form" apps/web/src/contact.tsx
+```
+
+The script stages only those paths, checks the staged diff, and commits. Review it afterward with `git show --stat`, then push the branch and open a pull request. Repository branch protection should additionally require pull requests before merging into the default branch.

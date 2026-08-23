@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+message=$(sed -n '1p' "$1")
+
+if [ "${#message}" -gt 72 ]; then
+  echo "Commit rejected: subject must be at most 72 characters." >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$message" | grep -Eq '^(feat|fix|docs|style|refactor|test|chore)\([a-z0-9][a-z0-9._/-]*\): [a-z][^\.]*[^\.]$'; then
+  echo "Commit rejected: use '<type>(<scope>): <imperative summary>'." >&2
+  echo "Example: fix(header): prevent navigation overflow" >&2
+  exit 1
+fi
