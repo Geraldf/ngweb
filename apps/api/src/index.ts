@@ -10,6 +10,7 @@ dotenv.config({ path: path.resolve(import.meta.dirname, "../../../.env") });
 const DATA_MIGRATION_VERSION = 1;
 const MIGRATION_IMPORT_LIMIT = "500mb";
 const MIGRATION_IMPORT_LIMIT_LABEL = "500 MB";
+const MINIMUM_STAY_NIGHTS = 10;
 
 type MigrationPackage = {
   migrationVersion: number;
@@ -252,9 +253,10 @@ function bookingFields(body: Record<string, unknown>): BookingFields | undefined
   const departure = typeof body.departure === "string" ? body.departure : "";
   const start = new Date(`${arrival}T00:00:00Z`);
   const end = new Date(`${departure}T00:00:00Z`);
+  const stayNights = (end.getTime() - start.getTime()) / 86_400_000;
   const guests = Number(body.guests);
   const status = body.status === "booked" || body.status === "reserved" ? body.status : "requested";
-  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start ||
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start || stayNights < MINIMUM_STAY_NIGHTS ||
       typeof body.name !== "string" || !body.name.trim() || typeof body.email !== "string" || !body.email.includes("@") ||
       !Number.isInteger(guests) || guests < 1 || guests > 4) return undefined;
   return {
