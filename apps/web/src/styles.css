@@ -41,9 +41,6 @@ button { font: inherit; }
 .signature { font-family: "Italiana", serif; font-size: 22px; color: #263127; font-style: italic; margin: 28px 0 38px; }
 .text-link { display: inline-flex; gap: 35px; padding-bottom: 9px; border-bottom: 1px solid #6c7166; color: #263127; text-transform: uppercase; letter-spacing: .18em; font-size: 9px; }
 
-.quote { min-height: 570px; padding: 120px 8vw; background: #7d836f; color: #f7f3e9; display: grid; place-content: center; text-align: center; }
-.quote p { margin: 0 0 28px; font-size: 10px; text-transform: uppercase; letter-spacing: .3em; }
-.quote blockquote { margin: 0; font-family: "Italiana", serif; font-size: clamp(42px, 6vw, 85px); line-height: 1.12; }
 .casa-section { padding: 150px 5vw 170px; background: #f3f0e8; }
 .casa-intro { max-width: 1320px; margin: 0 auto 120px; display: grid; grid-template-columns: 12% 38% 1fr; gap: 5%; }
 .casa-heading h2 { margin: 0; font-family: "Italiana", serif; font-size: clamp(55px, 6.4vw, 98px); font-weight: 400; line-height: .95; letter-spacing: -.03em; }
