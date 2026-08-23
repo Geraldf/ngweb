@@ -44,6 +44,7 @@ type MediaItem = { id: string; filename: string; title: string; mimeType: string
 type GalleryPhoto = { id: string; src: string; title: string; position?: string; className?: string };
 type BookingStatus = "requested" | "reserved" | "booked";
 type BookingRange = { arrival: string; departure: string; status: BookingStatus };
+type Pricing = { lowSeason: number; midSeason: number; highSeason: number };
 type AdminBooking = BookingRange & { id: string; name: string; email: string; guests: number; message: string; createdAt: string };
 type BookingDebugEntry = { id: string; timestamp: string; operation: string; status: number | "network"; message: string };
 
@@ -99,14 +100,15 @@ const migrationImportTimeoutMs = 10 * 60_000;
 const minimumStayNights = 10;
 const cleaningFee = 150;
 const laundryFeePerGuest = 25;
+const defaultPricing: Pricing = { lowSeason: 120, midSeason: 160, highSeason: 210 };
 
 function trackEvent(name: string, detail: Record<string, string | number> = {}) {
   window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
 }
 
-function nightlyRate(date: Date) {
+function nightlyRate(date: Date, pricing: Pricing) {
   const month = date.getUTCMonth();
-  return month <= 2 || month === 10 || month === 11 ? 120 : month <= 5 || month === 9 ? 160 : 210;
+  return month <= 2 || month === 10 || month === 11 ? pricing.lowSeason : month <= 5 || month === 9 ? pricing.midSeason : pricing.highSeason;
 }
 
 function App() {
@@ -116,7 +118,7 @@ function App() {
   const [activePhoto, setActivePhoto] = useState<number | null>(null);
   const [portraitPhotoIds, setPortraitPhotoIds] = useState<Set<string>>(() => new Set());
   const [managerOpen, setManagerOpen] = useState(false);
-  const [managerSection, setManagerSection] = useState<"images" | "bookings" | "migration">("images");
+  const [managerSection, setManagerSection] = useState<"images" | "bookings" | "pricing" | "migration">("images");
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [mediaError, setMediaError] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -138,6 +140,9 @@ function App() {
   const [adminBusy, setAdminBusy] = useState(false);
   const [migrationBusy, setMigrationBusy] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState("");
+  const [pricing, setPricing] = useState<Pricing>(defaultPricing);
+  const [pricingDraft, setPricingDraft] = useState<Pricing>(defaultPricing);
+  const [pricingStatus, setPricingStatus] = useState("");
   const [bookingDebug, setBookingDebug] = useState(false);
   const [bookingDebugEntries, setBookingDebugEntries] = useState<BookingDebugEntry[]>([]);
 
@@ -162,11 +167,11 @@ function App() {
     let accommodation = 0;
     for (const date = new Date(start); date < end; date.setUTCDate(date.getUTCDate() + 1)) {
       nights += 1;
-      accommodation += nightlyRate(date);
+      accommodation += nightlyRate(date, pricing);
     }
     const laundry = guests * laundryFeePerGuest;
     return { nights, accommodation, laundry, total: accommodation + cleaningFee + laundry };
-  }, [arrival, departure, guests]);
+  }, [arrival, departure, guests, pricing]);
   const minimumDeparture = useMemo(() => {
     if (!arrival) return "";
     const date = new Date(`${arrival}T00:00:00Z`);
@@ -192,6 +197,19 @@ function App() {
       setBookings(response.ok ? await response.json() as BookingRange[] : []);
     } catch {
       setBookings([]);
+    }
+  };
+
+  const loadPricing = async () => {
+    try {
+      const response = await fetch(`${apiBase}/api/pricing`);
+      if (!response.ok) throw new Error("Preise konnten nicht geladen werden.");
+      const result = await response.json() as Pricing;
+      setPricing(result);
+      setPricingDraft(result);
+    } catch {
+      setPricing(defaultPricing);
+      setPricingDraft(defaultPricing);
     }
   };
 
@@ -249,7 +267,7 @@ function App() {
         throw new Error(result.message ?? "Anmeldung fehlgeschlagen.");
       }
       setAdminAuthenticated(true);
-      await loadAdminBookings();
+      await Promise.all([loadAdminBookings(), loadPricing()]);
     } catch (error) {
       setAdminAuthenticated(false);
       setAdminError(error instanceof Error ? error.message : "Anmeldung fehlgeschlagen.");
@@ -276,7 +294,30 @@ function App() {
   useEffect(() => {
     void loadMedia();
     void loadPublicBookings();
+    void loadPricing();
   }, []);
+
+  const savePricingSettings = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAdminBusy(true);
+    setPricingStatus("");
+    try {
+      const response = await authenticatedRequest(`${apiBase}/api/admin/pricing`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pricingDraft),
+      });
+      const result = await response.json() as Pricing | { message?: string };
+      if (!response.ok) throw new Error("message" in result ? result.message : "Preise konnten nicht gespeichert werden.");
+      setPricing(result as Pricing);
+      setPricingDraft(result as Pricing);
+      setPricingStatus("Saisonpreise wurden gespeichert.");
+    } catch (error) {
+      setPricingStatus(error instanceof Error ? error.message : "Preise konnten nicht gespeichert werden.");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
 
   const submitBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -767,9 +808,9 @@ function App() {
             <p>Die Casa bietet Platz für bis zu vier Personen. Wählen Sie Ihren Reisezeitraum und senden Sie uns direkt Ihre unverbindliche Buchungsanfrage.</p>
           </div>
           <div className="rate-grid">
-            <article><small>November – März</small><h3>€ 120</h3><p>pro Nacht · Nebensaison</p></article>
-            <article><small>April – Juni · Oktober</small><h3>€ 160</h3><p>pro Nacht · Zwischensaison</p></article>
-            <article><small>Juli – September</small><h3>€ 210</h3><p>pro Nacht · Hauptsaison</p></article>
+            <article><small>November – März</small><h3>€ {pricing.lowSeason}</h3><p>pro Nacht · Nebensaison</p></article>
+            <article><small>April – Juni · Oktober</small><h3>€ {pricing.midSeason}</h3><p>pro Nacht · Zwischensaison</p></article>
+            <article><small>Juli – September</small><h3>€ {pricing.highSeason}</h3><p>pro Nacht · Hauptsaison</p></article>
           </div>
           <p className="price-note">Mindestaufenthalt 10 Nächte · Endreinigung € 150 · Wäschepaket € 25 pro Person · Die Übernachtungspreise gelten für das gesamte Haus.</p>
           <div className="booking-calendar" aria-labelledby="calendar-title">
@@ -833,6 +874,7 @@ function App() {
           <nav className="manager-tabs" aria-label="Verwaltungsbereiche">
             <button className={managerSection === "images" ? "is-active" : ""} onClick={() => setManagerSection("images")}>Bilder</button>
             <button className={managerSection === "bookings" ? "is-active" : ""} onClick={() => { setManagerSection("bookings"); void loadAdminBookings(); }}>Buchungen</button>
+            <button className={managerSection === "pricing" ? "is-active" : ""} onClick={() => setManagerSection("pricing")}>Preise</button>
             <button className={managerSection === "migration" ? "is-active" : ""} onClick={() => setManagerSection("migration")}>Migration</button>
           </nav>
           {managerSection === "images" && <><div className="manager-toolbar">
@@ -898,6 +940,20 @@ function App() {
               <div className="admin-booking-actions"><button disabled={adminBusy} onClick={() => void updateAdminBooking(booking)}>Speichern</button><button className="delete-button" disabled={adminBusy} onClick={() => void deleteAdminBooking(booking)}>Löschen</button></div>
             </article>)}</div> : <div className="manager-empty"><strong>Noch keine Buchungen</strong><span>Legen Sie die erste Buchung über das Formular an.</span></div>}
           </div>}
+          {managerSection === "pricing" && <form className="pricing-manager" onSubmit={savePricingSettings}>
+            <div>
+              <p className="eyebrow">Saisonpreise</p>
+              <h3>Preis pro Nacht bearbeiten</h3>
+              <p>Die Saisonzeiträume bleiben fest. Gespeicherte Preise werden sofort auf der Website und in der Preiskalkulation verwendet.</p>
+            </div>
+            <div className="pricing-fields">
+              <label>November – März<input type="number" min="1" max="10000" step="1" value={pricingDraft.lowSeason} onChange={(event) => setPricingDraft((current) => ({ ...current, lowSeason: Number(event.target.value) }))} required /><span>€ pro Nacht · Nebensaison</span></label>
+              <label>April – Juni · Oktober<input type="number" min="1" max="10000" step="1" value={pricingDraft.midSeason} onChange={(event) => setPricingDraft((current) => ({ ...current, midSeason: Number(event.target.value) }))} required /><span>€ pro Nacht · Zwischensaison</span></label>
+              <label>Juli – September<input type="number" min="1" max="10000" step="1" value={pricingDraft.highSeason} onChange={(event) => setPricingDraft((current) => ({ ...current, highSeason: Number(event.target.value) }))} required /><span>€ pro Nacht · Hauptsaison</span></label>
+            </div>
+            <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird gespeichert …" : "Preise speichern"}</button>
+            {pricingStatus && <p className="pricing-status" role="status">{pricingStatus}</p>}
+          </form>}
           {managerSection === "migration" && <section className="migration-manager">
             <div>
               <p className="eyebrow">Datensicherung</p>

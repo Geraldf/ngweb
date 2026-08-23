@@ -42,6 +42,9 @@ type Booking = {
 };
 
 type BookingFields = Omit<Booking, "id" | "createdAt">;
+type Pricing = { lowSeason: number; midSeason: number; highSeason: number };
+
+const defaultPricing: Pricing = { lowSeason: 120, midSeason: 160, highSeason: 210 };
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -50,6 +53,7 @@ const webDirectory = process.env.WEB_DIST_DIR ? path.resolve(process.env.WEB_DIS
 const filesDirectory = path.join(dataDirectory, "files");
 const indexFile = path.join(dataDirectory, "media.json");
 const bookingsFile = path.join(dataDirectory, "bookings.json");
+const pricingFile = path.join(dataDirectory, "pricing.json");
 const supportedTypes: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
@@ -248,6 +252,32 @@ async function saveBookings(bookings: Booking[]) {
   await writeFile(bookingsFile, JSON.stringify(bookings, null, 2));
 }
 
+function pricingFields(body: Record<string, unknown>): Pricing | undefined {
+  const pricing = {
+    lowSeason: Number(body.lowSeason),
+    midSeason: Number(body.midSeason),
+    highSeason: Number(body.highSeason),
+  };
+  return Object.values(pricing).every((rate) => Number.isInteger(rate) && rate >= 1 && rate <= 10_000) ? pricing : undefined;
+}
+
+async function readPricing(): Promise<Pricing> {
+  try {
+    const parsed = JSON.parse(await readFile(pricingFile, "utf8")) as Record<string, unknown>;
+    const pricing = pricingFields(parsed);
+    if (!pricing) throw new Error("Die gespeicherte Preiskonfiguration ist ungültig.");
+    return pricing;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return defaultPricing;
+    throw error;
+  }
+}
+
+async function savePricing(pricing: Pricing) {
+  await mkdir(dataDirectory, { recursive: true });
+  await writeFile(pricingFile, JSON.stringify(pricing, null, 2));
+}
+
 function bookingFields(body: Record<string, unknown>): BookingFields | undefined {
   const arrival = typeof body.arrival === "string" ? body.arrival : "";
   const departure = typeof body.departure === "string" ? body.departure : "";
@@ -323,6 +353,14 @@ app.get("/api/bookings", async (_request, response, next) => {
   }
 });
 
+app.get("/api/pricing", async (_request, response, next) => {
+  try {
+    response.json(await readPricing());
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post("/api/bookings", async (request, response, next) => {
   try {
     const fields = bookingFields({ ...(request.body as Record<string, unknown>), status: "requested" });
@@ -351,6 +389,20 @@ app.use("/api/admin", requireAdmin);
 
 app.get("/api/admin/session", (_request, response) => {
   response.status(204).end();
+});
+
+app.put("/api/admin/pricing", async (request, response, next) => {
+  try {
+    const pricing = pricingFields(request.body as Record<string, unknown>);
+    if (!pricing) {
+      response.status(400).json({ message: "Alle Saisonpreise müssen ganze Eurobeträge zwischen 1 und 10.000 sein." });
+      return;
+    }
+    await savePricing(pricing);
+    response.json(pricing);
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get("/api/admin/bookings", async (_request, response, next) => {

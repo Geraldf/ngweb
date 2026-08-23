@@ -236,6 +236,16 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .media-actions button:disabled { opacity: .3; cursor: default; }
 .media-actions .delete-button { padding: 0 12px; color: #87382e; font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
 .booking-manager { max-width: 1200px; margin: 0 auto; }
+.pricing-manager { max-width: 1200px; margin: 0 auto; padding: 38px; border: 1px solid #c9c7bd; background: #e8e4da; }
+.pricing-manager h3 { margin: 0 0 14px; font: 400 30px "Italiana", serif; }
+.pricing-manager > div > p:not(.eyebrow) { max-width: 680px; color: #666a61; font-size: 13px; line-height: 1.7; }
+.pricing-fields { margin: 32px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.pricing-fields label { color: #777a70; font-size: 9px; text-transform: uppercase; letter-spacing: .12em; }
+.pricing-fields input { width: 100%; margin: 9px 0 7px; padding: 14px; border: 1px solid #c2c0b6; background: #f7f4ed; color: #263127; font: 20px "DM Sans", sans-serif; }
+.pricing-fields span { display: block; color: #666a61; font-size: 10px; letter-spacing: 0; text-transform: none; }
+.pricing-manager > button { padding: 14px 20px; border: 0; background: #263127; color: white; cursor: pointer; }
+.pricing-manager > button:disabled { opacity: .55; cursor: wait; }
+.pricing-status { margin: 18px 0 0; color: #263127; font-size: 13px; }
 .booking-debug-toggle { margin-bottom: 14px; display: flex; align-items: center; gap: 18px; }
 .booking-debug-toggle label { display: flex; align-items: center; gap: 8px; color: #263127; cursor: pointer; }
 .booking-debug-toggle input { width: auto; margin: 0; accent-color: #263127; }
@@ -346,6 +356,8 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
   .manager-toolbar { display: block; }
   .manager-toolbar p { margin: 13px 0 0; }
   .manager-toolbar .order-hint { margin-left: 0; }
+  .pricing-manager { padding: 28px 20px; }
+  .pricing-fields { grid-template-columns: 1fr; }
   .migration-manager { grid-template-columns: 1fr; }
   .migration-manager .migration-status { grid-column: 1; }
   .booking-debug-toggle { align-items: flex-start; flex-direction: column; gap: 7px; }
