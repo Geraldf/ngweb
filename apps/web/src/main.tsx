@@ -96,6 +96,9 @@ function BookingMonth({ month, bookings }: { month: Date; bookings: BookingRange
 const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 const adminRequestTimeoutMs = 10_000;
 const migrationImportTimeoutMs = 10 * 60_000;
+const minimumStayNights = 10;
+const cleaningFee = 150;
+const laundryFeePerGuest = 25;
 
 function trackEvent(name: string, detail: Record<string, string | number> = {}) {
   window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
@@ -122,6 +125,7 @@ function App() {
   const [bookingBusy, setBookingBusy] = useState(false);
   const [arrival, setArrival] = useState("");
   const [departure, setDeparture] = useState("");
+  const [guests, setGuests] = useState(2);
   const [bookingErrors, setBookingErrors] = useState<{ arrival?: string; departure?: string }>({});
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
@@ -160,8 +164,16 @@ function App() {
       nights += 1;
       accommodation += nightlyRate(date);
     }
-    return { nights, total: accommodation + 120 };
-  }, [arrival, departure]);
+    const laundry = guests * laundryFeePerGuest;
+    return { nights, accommodation, laundry, total: accommodation + cleaningFee + laundry };
+  }, [arrival, departure, guests]);
+  const minimumDeparture = useMemo(() => {
+    if (!arrival) return "";
+    const date = new Date(`${arrival}T00:00:00Z`);
+    if (!Number.isFinite(date.getTime())) return "";
+    date.setUTCDate(date.getUTCDate() + minimumStayNights);
+    return isoDate(date);
+  }, [arrival]);
 
   const loadMedia = async () => {
     try {
@@ -272,7 +284,7 @@ function App() {
     if (!arrival) errors.arrival = "Bitte wählen Sie ein Anreisedatum.";
     if (!departure) errors.departure = "Bitte wählen Sie ein Abreisedatum.";
     if (arrival && departure && departure <= arrival) errors.departure = "Die Abreise muss nach der Anreise liegen.";
-    if (priceSummary && priceSummary.nights < 5) errors.departure = "Der Mindestaufenthalt beträgt 5 Nächte.";
+    if (priceSummary && priceSummary.nights < minimumStayNights) errors.departure = `Der Mindestaufenthalt beträgt ${minimumStayNights} Nächte.`;
     setBookingErrors(errors);
     if (Object.keys(errors).length) {
       trackEvent("booking_validation_failed", { field: errors.arrival ? "arrival" : "departure" });
@@ -296,6 +308,7 @@ function App() {
       form.reset();
       setArrival("");
       setDeparture("");
+      setGuests(2);
       await loadPublicBookings();
     } catch (error) {
       trackEvent("booking_inquiry_failed");
@@ -758,7 +771,7 @@ function App() {
             <article><small>April – Juni · Oktober</small><h3>€ 160</h3><p>pro Nacht · Zwischensaison</p></article>
             <article><small>Juli – September</small><h3>€ 210</h3><p>pro Nacht · Hauptsaison</p></article>
           </div>
-          <p className="price-note">Mindestaufenthalt 5 Nächte · Endreinigung € 120 · Bettwäsche und Handtücher inklusive · Alle Preise verstehen sich für das gesamte Haus.</p>
+          <p className="price-note">Mindestaufenthalt 10 Nächte · Endreinigung € 150 · Wäschepaket € 25 pro Person · Die Übernachtungspreise gelten für das gesamte Haus.</p>
           <div className="booking-calendar" aria-labelledby="calendar-title">
             <div className="calendar-header">
               <div><p className="eyebrow dark">Belegungskalender</p><h3 id="calendar-title">Verfügbarkeit<br /><em>auf einen Blick.</em></h3></div>
@@ -783,11 +796,11 @@ function App() {
               <div className="booking-contact"><strong>Fragen vor der Buchung?</strong><a href="mailto:info@casa-baia-sant-anna.com">info@casa-baia-sant-anna.com</a><a href="tel:+4974134898934">+49 (0) 741 34898934</a></div>
             </div>
             <form className="booking-form" onSubmit={submitBooking} onFocus={() => trackEvent("booking_form_start")} noValidate>
-              <div className="form-row"><label>Anreise<input required name="arrival" type="date" value={arrival} min={new Date().toISOString().slice(0, 10)} aria-describedby={bookingErrors.arrival ? "arrival-error" : undefined} aria-invalid={Boolean(bookingErrors.arrival)} onChange={(event) => { setArrival(event.target.value); setBookingErrors((current) => ({ ...current, arrival: undefined })); }} />{bookingErrors.arrival && <span className="field-error" id="arrival-error">{bookingErrors.arrival}</span>}</label><label>Abreise<input required name="departure" type="date" value={departure} min={arrival || new Date().toISOString().slice(0, 10)} aria-describedby={bookingErrors.departure ? "departure-error" : undefined} aria-invalid={Boolean(bookingErrors.departure)} onChange={(event) => { setDeparture(event.target.value); setBookingErrors((current) => ({ ...current, departure: undefined })); }} />{bookingErrors.departure && <span className="field-error" id="departure-error">{bookingErrors.departure}</span>}</label></div>
+              <div className="form-row"><label>Anreise<input required name="arrival" type="date" value={arrival} min={new Date().toISOString().slice(0, 10)} aria-describedby={bookingErrors.arrival ? "arrival-error" : undefined} aria-invalid={Boolean(bookingErrors.arrival)} onChange={(event) => { setArrival(event.target.value); setBookingErrors((current) => ({ ...current, arrival: undefined })); }} />{bookingErrors.arrival && <span className="field-error" id="arrival-error">{bookingErrors.arrival}</span>}</label><label>Abreise<input required name="departure" type="date" value={departure} min={minimumDeparture || new Date().toISOString().slice(0, 10)} aria-describedby={bookingErrors.departure ? "departure-error" : undefined} aria-invalid={Boolean(bookingErrors.departure)} onChange={(event) => { setDeparture(event.target.value); setBookingErrors((current) => ({ ...current, departure: undefined })); }} />{bookingErrors.departure && <span className="field-error" id="departure-error">{bookingErrors.departure}</span>}</label></div>
               <div className="form-row"><label>Name<input required name="name" autoComplete="name" /></label><label>E-Mail<input required name="email" type="email" autoComplete="email" /></label></div>
-              <label>Gäste<select name="guests" defaultValue="2"><option value="1">1 Person</option><option value="2">2 Personen</option><option value="3">3 Personen</option><option value="4">4 Personen</option></select></label>
+              <label>Gäste<select name="guests" value={guests} onChange={(event) => setGuests(Number(event.target.value))}><option value="1">1 Person</option><option value="2">2 Personen</option><option value="3">3 Personen</option><option value="4">4 Personen</option></select></label>
               <label>Nachricht (optional)<textarea name="message" rows={4} placeholder="Was dürfen wir über Ihre Reise wissen?" /></label>
-              <div className="price-summary" aria-live="polite"><strong>{priceSummary ? `Voraussichtlich € ${priceSummary.total.toLocaleString("de-DE")}` : "Preisübersicht"}</strong><span>{priceSummary ? `${priceSummary.nights} Nächte inklusive € 120 Endreinigung` : "Reisedaten wählen für eine unverbindliche Schätzung"}</span><small>Mindestaufenthalt 5 Nächte · keine Zahlung bei Anfrage</small></div>
+              <div className="price-summary" aria-live="polite"><strong>{priceSummary ? `Voraussichtlich € ${priceSummary.total.toLocaleString("de-DE")}` : "Preisübersicht"}</strong><span>{priceSummary ? `${priceSummary.nights} Nächte € ${priceSummary.accommodation.toLocaleString("de-DE")} · Endreinigung € ${cleaningFee} · Wäschepaket € ${priceSummary.laundry}` : "Reisedaten wählen für eine unverbindliche Schätzung"}</span><small>Mindestaufenthalt 10 Nächte · keine Zahlung bei Anfrage</small></div>
               <p className="form-privacy-note">Hinweise zur Verarbeitung Ihrer Angaben finden Sie in unserer <a href="/datenschutz">Datenschutzerklärung</a>.</p>
               <button disabled={bookingBusy} type="submit">{bookingBusy ? "Wird gesendet …" : "Verfügbarkeit prüfen & anfragen"}<span>→</span></button>
               {bookingStatus && <p className="booking-status" role="status">{bookingStatus}</p>}
