@@ -608,11 +608,7 @@ function App() {
           </div>
         </section>
 
-        <section className="quote" id="casa">
-          <p>La dolce vita</p>
-          <blockquote>„Zuhause ist kein Ort –<br />Zuhause ist ein Gefühl.“</blockquote>
-        </section>
-        <section className="casa-section" aria-labelledby="casa-title">
+        <section className="casa-section" id="casa" aria-labelledby="casa-title">
           <div className="casa-intro">
             <div className="section-number">02 <span /></div>
             <div className="casa-heading">
