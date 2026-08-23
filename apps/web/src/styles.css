@@ -379,7 +379,7 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .section-cta a:hover { background: #263127; color: white; }
 .section-cta-light a { border-color: #f3f0e8; }
 .section-cta-light a:hover { background: #f3f0e8; color: #263127; }
-.menu-panel nav .menu-cta { margin-top: 18px; padding-left: 18px; color: #263127; background: #f3f0e8; }
+.menu-panel nav .menu-cta { margin-top: 18px; }
 .welcome-copy, .casa-copy, .casa-feature p, .gallery-intro > p, .location-lead, .location-details p, .prices-intro > p, .availability-copy > p:not(.eyebrow) { color: #4e554e; font-size: 16px; line-height: 1.75; }
 .location-lead, .location-details p { color: #f0f1ec; }
 .distance-panel dt, .distance-panel dd, .rate-grid p, .price-note, .calendar-day, .calendar-legend, .form-privacy-note, .booking-status { font-size: 14px; }
