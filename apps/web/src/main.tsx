@@ -489,9 +489,9 @@ function App() {
   return (
     <>
       <header className="site-header">
-        <a className="brand" href="/#home" aria-label="Casa Baia Sant’Anna – Startseite">
+        <a className="brand" href="/#home" aria-label="CASA BAIA SANT'ANNA – Startseite">
           <BrandMark />
-          <span className="brand-copy"><strong>CASA BAIA SANT’ANNA</strong><small>Sardegna</small></span>
+          <span className="brand-copy"><strong>CASA BAIA SANT'ANNA</strong><small>Sardegna</small></span>
         </a>
         {!isImpressum && !isDatenschutz && <a className="header-cta" href="#anfrage" onClick={() => trackEvent("cta_click", { placement: "header" })}>Verfügbarkeit prüfen</a>}
         <button className="menu-button" onClick={() => setMenuOpen(true)} aria-label="Menü öffnen">
@@ -515,7 +515,7 @@ function App() {
         <section className="legal-content">
           <div className="section-number">01 <span /></div>
           <div className="legal-details">
-            <h2>Casa Baia Sant’Anna</h2>
+            <h2>CASA BAIA SANT'ANNA</h2>
             <div className="legal-copy">
               <p>Susanne Adrian-Fuchs &amp; Gerald Fuchs</p>
               <address>Chemnitzer Strasse 8<br />78658 Zimmern o.R.<br />Deutschland</address>
@@ -716,7 +716,7 @@ function App() {
 
           <figure className="location-map">
             <a className="location-map-link" href={googleMapsUrl} target="_blank" rel="noreferrer" aria-label="Position der Casa in Google Maps öffnen" onClick={() => trackEvent("map_click")}>
-              <img src={locationMapImage} alt="Illustrierte Lagekarte der Casa Baia Sant’Anna bei den Koordinaten 40.6855258 Nord und 9.7383962 Ost" loading="lazy" />
+              <img src={locationMapImage} alt="Illustrierte Lagekarte der CASA BAIA SANT'ANNA bei den Koordinaten 40.6855258 Nord und 9.7383962 Ost" loading="lazy" />
             </a>
             <figcaption>
               <div><span>Exakte Position</span><strong>40.6855258 N · 9.7383962 E</strong></div>
@@ -897,7 +897,7 @@ function App() {
         </>}
       </div>}
 
-      <footer><a className="brand footer-brand" href="/#home"><BrandMark /><span className="brand-copy"><strong>Casa Baia Sant’Anna</strong><small>Sardegna</small></span></a><p>© 2026 Casa Baia Sant’Anna</p><p>Version {webPackage.version}</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; <a href="/datenschutz">Datenschutz</a></p></footer>
+      <footer><a className="brand footer-brand" href="/#home"><BrandMark /><span className="brand-copy"><strong>CASA BAIA SANT'ANNA</strong><small>Sardegna</small></span></a><p>© 2026 CASA BAIA SANT'ANNA</p><p>Version {webPackage.version}</p><p><a href="/impressum">Impressum</a> &nbsp; · &nbsp; <a href="/datenschutz">Datenschutz</a></p></footer>
     </>
   );
 }
