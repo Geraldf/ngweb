@@ -1,5 +1,5 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FormEvent, MouseEvent } from "react";
 import { createRoot } from "react-dom/client";
 import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-600.css";
@@ -26,6 +26,7 @@ import wohnenKuecheImage from "./assets/Wohnen_Kueche.jpg";
 import "./styles.css";
 
 const links = ["Home", "La Casa", "Galerie", "Lage & Infos", "Preise & Kalender"];
+const menuTargets = ["home", "casa", "galerie", "lage", "preise"] as const;
 const googleMapsUrl = "https://www.google.de/maps/place/CASA+BAIA+SANT+ANNA/@40.6855298,9.7358159,748m/data=!3m2!1e3!4b1!4m6!3m5!1s0x12dedb92f8b8838d:0xe5e1f73dbbd3b38d!8m2!3d40.6855258!4d9.7383962!16s%2Fg%2F11yk4ddk7c";
 const destinations = [
   ["Budoni", "5 Min."],
@@ -309,6 +310,18 @@ function App() {
     return () => document.body.classList.remove("menu-open");
   }, [menuOpen]);
 
+  const navigateFromMenu = (event: MouseEvent<HTMLAnchorElement>, targetId: string) => {
+    setMenuOpen(false);
+    if (isImpressum || isDatenschutz) return;
+
+    event.preventDefault();
+    document.body.classList.remove("menu-open");
+    window.requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.history.replaceState(null, "", `#${targetId}`);
+    });
+  };
+
   useEffect(() => {
     if (activePhoto === null) return;
     const onKey = (event: KeyboardEvent) => {
@@ -503,7 +516,7 @@ function App() {
 
       <div className={`menu-panel ${menuOpen ? "is-open" : ""}`} aria-hidden={!menuOpen}>
         <button className="close-button" onClick={() => setMenuOpen(false)} aria-label="Menü schließen">Schließen <span>×</span></button>
-        <nav>{links.map((link, i) => <a key={link} href={["/#home", "/#casa", "/#galerie", "/#lage", "/#preise"][i]} onClick={() => setMenuOpen(false)}><small>0{i + 1}</small>{link}</a>)}<a className="menu-cta" href="/#anfrage" onClick={() => { setMenuOpen(false); trackEvent("cta_click", { placement: "menu" }); }}><small>06</small>Aufenthalt anfragen</a></nav>
+        <nav>{links.map((link, i) => <a key={link} href={`/#${menuTargets[i]}`} onClick={(event) => navigateFromMenu(event, menuTargets[i])}><small>0{i + 1}</small>{link}</a>)}<a className="menu-cta" href="/#anfrage" onClick={(event) => { navigateFromMenu(event, "anfrage"); trackEvent("cta_click", { placement: "menu" }); }}><small>06</small>Aufenthalt anfragen</a></nav>
         <p>Sardinien, Italien<br />info@casa-baia-sant-anna.com</p>
       </div>
 
