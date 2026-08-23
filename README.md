@@ -30,10 +30,11 @@ Source files are mounted into the container, so both services reload as files ch
 - `npm run dev` — start frontend and backend with reload
 - `npm run typecheck` — type-check both workspaces
 - `npm run build` — create production builds
-- `npm run task:start -- <TASK-ID> <title>` — create a dedicated task branch
-- `npm run task:complete -- <title>` — commit a completed task with the required message
+- `npm run git:start -- <type> <description>` — update the base and create a change branch
+- `npm run git:check` — type-check and build the change
+- `npm run git:commit -- "<message>" <files...>` — stage explicit files and commit
 
-Run `npm run governance:install` once after cloning to enable the tracked Git checks. See [Git task governance](docs/git-governance.md) for the required branch and commit conventions.
+Run `npm run git:install-hooks` once after cloning to enable the tracked Git checks. See [Git change workflow](docs/git-governance.md) for the required branch and commit conventions.
 
 Environment variables are documented in `.env.example`. Keep local `.env` files out of version control.
 

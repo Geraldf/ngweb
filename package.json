@@ -9,9 +9,10 @@
     "dev": "concurrently -n api,web -c yellow,cyan \"npm run dev -w @fuchsclan/api\" \"npm run dev -w @fuchsclan/web\"",
     "build": "npm run build -w @fuchsclan/api && npm run build -w @fuchsclan/web",
     "typecheck": "npm run typecheck -w @fuchsclan/api && npm run typecheck -w @fuchsclan/web",
-    "governance:install": "git config core.hooksPath .githooks",
-    "task:start": "sh scripts/task-start.sh",
-    "task:complete": "sh scripts/task-complete.sh"
+    "git:install-hooks": "git config core.hooksPath .githooks",
+    "git:start": "sh scripts/git-start.sh",
+    "git:check": "sh scripts/git-check.sh",
+    "git:commit": "sh scripts/git-commit.sh"
   },
   "devDependencies": {
     "concurrently": "^9.2.0"

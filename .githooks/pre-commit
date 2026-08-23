@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+branch=$(git branch --show-current)
+case "$branch" in
+  feat/*|fix/*|docs/*|refactor/*) ;;
+  main|master)
+    echo "Commit rejected: direct commits to '$branch' are forbidden." >&2
+    exit 1
+    ;;
+  *)
+    echo "Commit rejected: branch must start with feat/, fix/, docs/, or refactor/." >&2
+    exit 1
+    ;;
+esac
+
+git diff --cached --check
