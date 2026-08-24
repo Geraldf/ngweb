@@ -505,6 +505,25 @@ function App() {
     }
   };
 
+  const exportBookingCalendar = async () => {
+    setAdminBusy(true);
+    setAdminError("");
+    try {
+      const response = await authenticatedRequest(`${apiBase}/api/admin/bookings/export.xlsx`);
+      if (!response.ok) throw new Error((await response.json() as { message?: string }).message ?? "Excel-Export fehlgeschlagen.");
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "kalender-2027-buchungen.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : "Excel-Export fehlgeschlagen.");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
   const exportMigration = async () => {
     setMigrationBusy(true);
     setMigrationStatus("");
@@ -912,7 +931,10 @@ function App() {
                 <time>{entry.timestamp}</time><code>{entry.operation}</code><b>{entry.status}</b><span>{entry.message}</span>
               </li>)}</ol>}
             </aside>}
-            <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Wird geladen …" : "Buchungen neu laden"}</button>
+            <div className="booking-manager-actions">
+              <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Bitte warten …" : "Buchungen neu laden"}</button>
+              <button className="export-bookings-button" type="button" disabled={adminBusy} onClick={() => void exportBookingCalendar()}>Excel-Kalender herunterladen</button>
+            </div>
             {adminError && <p className="manager-error" role="alert">{adminError}</p>}
             <form className="booking-create" onSubmit={createAdminBooking}>
               <h3>Neue Buchung hinzufügen</h3>

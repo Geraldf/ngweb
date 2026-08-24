@@ -1,5 +1,6 @@
 import cors from "cors";
 import dotenv from "dotenv";
+import ExcelJS from "exceljs";
 import express from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { access, mkdir, mkdtemp, readFile, readdir, rename, rm, unlink, writeFile } from "node:fs/promises";
@@ -54,6 +55,7 @@ const filesDirectory = path.join(dataDirectory, "files");
 const indexFile = path.join(dataDirectory, "media.json");
 const bookingsFile = path.join(dataDirectory, "bookings.json");
 const pricingFile = path.join(dataDirectory, "pricing.json");
+const calendarTemplateFile = path.resolve(import.meta.dirname, "../assets/kalender-2027-template.xlsx");
 const supportedTypes: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
@@ -304,8 +306,91 @@ function overlapsBooking(bookings: Booking[], fields: BookingFields, ignoredId?:
   return bookings.some((booking) => booking.id !== ignoredId && booking.status !== "requested" && fields.arrival < booking.departure && fields.departure > booking.arrival);
 }
 
-function normalizedStatus(status: Booking["status"]) {
+function normalizedStatus(status: Booking["status"]): NonNullable<Booking["status"]> {
   return status === "booked" || status === "requested" ? status : "reserved";
+}
+
+function excelDate(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+async function createBookingCalendar(bookings: Booking[]) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(calendarTemplateFile);
+  const calendar = workbook.getWorksheet("Kalender 2027");
+  if (!calendar) throw new Error("Das Kalenderblatt der Excel-Vorlage fehlt.");
+
+  const exportedBookings = bookings
+    .map((booking) => ({ ...booking, status: normalizedStatus(booking.status) }))
+    .filter((booking): booking is Booking & { status: "reserved" | "booked" } => booking.status === "reserved" || booking.status === "booked")
+    .sort((a, b) => a.arrival.localeCompare(b.arrival));
+  const fills = {
+    reserved: { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFD966" } },
+    booked: { type: "pattern", pattern: "solid", fgColor: { argb: "FF70AD47" } },
+  } satisfies Record<"reserved" | "booked", ExcelJS.Fill>;
+
+  for (const booking of exportedBookings) {
+    const start = excelDate(booking.arrival);
+    const end = excelDate(booking.departure);
+    for (const date = new Date(start); date < end; date.setUTCDate(date.getUTCDate() + 1)) {
+      if (date.getUTCFullYear() !== 2027) continue;
+      const row = date.getUTCDate() + 2;
+      const firstColumn = date.getUTCMonth() * 4 + 1;
+      for (let column = firstColumn; column <= firstColumn + 2; column += 1) {
+        calendar.getCell(row, column).fill = fills[booking.status];
+      }
+      calendar.getCell(row, firstColumn).note = `${booking.status === "booked" ? "Gebucht" : "Reserviert"}: ${booking.name}\n${booking.arrival} – ${booking.departure}`;
+    }
+  }
+
+  calendar.getCell("A36").value = "Legende";
+  calendar.getCell("A36").font = { bold: true };
+  calendar.getCell("B36").value = "Reserviert";
+  calendar.getCell("B36").fill = fills.reserved;
+  calendar.getCell("D36").value = "Gebucht";
+  calendar.getCell("D36").fill = fills.booked;
+  calendar.pageSetup.printArea = "A1:AV36";
+
+  const details = workbook.addWorksheet("Buchungen", {
+    views: [{ state: "frozen", ySplit: 1 }],
+    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+  });
+  details.columns = [
+    { header: "Status", key: "status", width: 14 },
+    { header: "Anreise", key: "arrival", width: 13 },
+    { header: "Abreise", key: "departure", width: 13 },
+    { header: "Nächte", key: "nights", width: 10 },
+    { header: "Name", key: "name", width: 28 },
+    { header: "E-Mail", key: "email", width: 34 },
+    { header: "Gäste", key: "guests", width: 10 },
+    { header: "Nachricht", key: "message", width: 55 },
+  ];
+  details.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+  details.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF263127" } };
+  details.getRow(1).alignment = { vertical: "middle" };
+  details.autoFilter = { from: "A1", to: "H1" };
+  for (const booking of exportedBookings) {
+    const row = details.addRow({
+      status: booking.status === "booked" ? "Gebucht" : "Reserviert",
+      arrival: excelDate(booking.arrival),
+      departure: excelDate(booking.departure),
+      nights: Math.round((excelDate(booking.departure).getTime() - excelDate(booking.arrival).getTime()) / 86_400_000),
+      name: booking.name,
+      email: booking.email,
+      guests: booking.guests,
+      message: booking.message,
+    });
+    row.getCell("arrival").numFmt = "dd.mm.yyyy";
+    row.getCell("departure").numFmt = "dd.mm.yyyy";
+    row.getCell("status").fill = fills[booking.status];
+    row.alignment = { vertical: "top", wrapText: true };
+  }
+  details.getColumn("email").eachCell((cell, rowNumber) => {
+    if (rowNumber > 1 && typeof cell.value === "string") cell.value = { text: cell.value, hyperlink: `mailto:${cell.value}` };
+  });
+
+  return workbook.xlsx.writeBuffer();
 }
 
 function requireAdmin(request: express.Request, response: express.Response, next: express.NextFunction) {
@@ -409,6 +494,20 @@ app.get("/api/admin/bookings", async (_request, response, next) => {
   try {
     const bookings = await readBookings();
     response.json(bookings.map((booking) => ({ ...booking, status: normalizedStatus(booking.status) })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/admin/bookings/export.xlsx", async (_request, response, next) => {
+  try {
+    const file = await createBookingCalendar(await readBookings());
+    response.set({
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": "attachment; filename=kalender-2027-buchungen.xlsx",
+      "Cache-Control": "no-store",
+    });
+    response.send(Buffer.from(file));
   } catch (error) {
     next(error);
   }
