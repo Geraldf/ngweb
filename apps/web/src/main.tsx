@@ -101,6 +101,8 @@ const minimumStayNights = 10;
 const cleaningFee = 150;
 const laundryFeePerGuest = 25;
 const defaultPricing: Pricing = { lowSeason: 120, midSeason: 160, highSeason: 210 };
+const currentYear = new Date().getFullYear();
+const calendarExportYears = Array.from({ length: 13 }, (_, index) => currentYear - 2 + index);
 
 function trackEvent(name: string, detail: Record<string, string | number> = {}) {
   window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
@@ -136,6 +138,7 @@ function App() {
   const [adminToken, setAdminToken] = useState("");
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   const [adminBookings, setAdminBookings] = useState<AdminBooking[]>([]);
+  const [calendarExportYear, setCalendarExportYear] = useState(currentYear + 1);
   const [adminError, setAdminError] = useState("");
   const [adminBusy, setAdminBusy] = useState(false);
   const [migrationBusy, setMigrationBusy] = useState(false);
@@ -153,6 +156,9 @@ function App() {
       title: item.title,
     })), [media]);
   const sortedMedia = useMemo(() => [...media].sort((a, b) => a.order - b.order), [media]);
+  const filteredAdminBookings = useMemo(() => adminBookings.filter((booking) =>
+    booking.departure > `${calendarExportYear}-01-01` && booking.arrival < `${calendarExportYear + 1}-01-01`,
+  ), [adminBookings, calendarExportYear]);
   const activeBookings = useMemo(() => {
     const today = isoDate(new Date());
     return bookings.filter((booking) => booking.departure > today);
@@ -500,6 +506,44 @@ function App() {
       await loadPublicBookings();
     } catch (error) {
       setAdminError(error instanceof Error ? error.message : "Buchung konnte nicht gelöscht werden.");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
+  const exportBookingCalendar = async () => {
+    setAdminBusy(true);
+    setAdminError("");
+    try {
+      const response = await authenticatedRequest(`${apiBase}/api/admin/bookings/export.xlsx?year=${calendarExportYear}`);
+      if (!response.ok) throw new Error((await response.json() as { message?: string }).message ?? "Excel-Export fehlgeschlagen.");
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `kalender-${calendarExportYear}-buchungen.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : "Excel-Export fehlgeschlagen.");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
+  const exportBookingCalendarPdf = async () => {
+    setAdminBusy(true);
+    setAdminError("");
+    try {
+      const response = await authenticatedRequest(`${apiBase}/api/admin/bookings/export.pdf?year=${calendarExportYear}`);
+      if (!response.ok) throw new Error((await response.json() as { message?: string }).message ?? "PDF-Export fehlgeschlagen.");
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `kalender-${calendarExportYear}-buchungen.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : "PDF-Export fehlgeschlagen.");
     } finally {
       setAdminBusy(false);
     }
@@ -912,7 +956,12 @@ function App() {
                 <time>{entry.timestamp}</time><code>{entry.operation}</code><b>{entry.status}</b><span>{entry.message}</span>
               </li>)}</ol>}
             </aside>}
-            <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Wird geladen …" : "Buchungen neu laden"}</button>
+            <div className="booking-manager-actions">
+              <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Bitte warten …" : "Buchungen neu laden"}</button>
+              <label className="calendar-export-year">Buchungsjahr<select value={calendarExportYear} disabled={adminBusy} onChange={(event) => setCalendarExportYear(Number(event.target.value))}>{calendarExportYears.map((year) => <option value={year} key={year}>{year}</option>)}</select></label>
+              <button className="export-bookings-button" type="button" disabled={adminBusy} onClick={() => void exportBookingCalendar()}>Druckfertigen Excel-Kalender herunterladen</button>
+              <button className="export-bookings-button" type="button" disabled={adminBusy} onClick={() => void exportBookingCalendarPdf()}>Druckfertigen PDF-Kalender herunterladen</button>
+            </div>
             {adminError && <p className="manager-error" role="alert">{adminError}</p>}
             <form className="booking-create" onSubmit={createAdminBooking}>
               <h3>Neue Buchung hinzufügen</h3>
@@ -926,7 +975,7 @@ function App() {
               <label className="booking-message-field">Nachricht<textarea name="message" rows={2} /></label>
               <button type="submit" disabled={adminBusy}>{adminBusy ? "Wird angelegt …" : "＋ Buchung hinzufügen"}</button>
             </form>
-            {adminBookings.length > 0 ? <div className="admin-booking-list">{adminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
+            {filteredAdminBookings.length > 0 ? <div className="admin-booking-list">{filteredAdminBookings.map((booking) => <article className="admin-booking" key={booking.id}>
               <div className="admin-booking-heading"><strong>{booking.name}</strong><span className={`booking-badge is-${booking.status}`}>{bookingStatusLabel(booking.status)}</span></div>
               <div className="admin-booking-fields">
                 <label>Anreise<input type="date" value={booking.arrival} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, arrival: event.target.value } : item))} /></label>
@@ -938,7 +987,7 @@ function App() {
                 <label className="booking-message-field">Nachricht<textarea rows={2} value={booking.message} onChange={(event) => setAdminBookings((current) => current.map((item) => item.id === booking.id ? { ...item, message: event.target.value } : item))} /></label>
               </div>
               <div className="admin-booking-actions"><button disabled={adminBusy} onClick={() => void updateAdminBooking(booking)}>Speichern</button><button className="delete-button" disabled={adminBusy} onClick={() => void deleteAdminBooking(booking)}>Löschen</button></div>
-            </article>)}</div> : <div className="manager-empty"><strong>Noch keine Buchungen</strong><span>Legen Sie die erste Buchung über das Formular an.</span></div>}
+            </article>)}</div> : <div className="manager-empty"><strong>Keine Buchungen für {calendarExportYear}</strong><span>Wählen Sie ein anderes Buchungsjahr oder legen Sie eine neue Buchung an.</span></div>}
           </div>}
           {managerSection === "pricing" && <form className="pricing-manager" onSubmit={savePricingSettings}>
             <div>
