@@ -311,20 +311,110 @@ function normalizedStatus(status: Booking["status"]): NonNullable<Booking["statu
   return status === "booked" || status === "requested" ? status : "reserved";
 }
 
+function calendarExportYear(value: unknown) {
+  const year = Number(value ?? 2027);
+  return Number.isInteger(year) && year >= 2020 && year <= 2100 ? year : undefined;
+}
+
 function excelDate(iso: string) {
   const [year, month, day] = iso.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day));
 }
 
-async function createBookingCalendar(bookings: Booking[]) {
+function isoWeek(date: Date) {
+  const thursday = new Date(date);
+  thursday.setUTCDate(thursday.getUTCDate() + 4 - (thursday.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
+  return Math.ceil((((thursday.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
+}
+
+function calendarHolidays(year: number) {
+  const holidays = new Map<string, string>();
+  const add = (date: Date, label: string) => holidays.set(date.toISOString().slice(0, 10), label);
+  const fixed = (month: number, day: number, label: string) => add(new Date(Date.UTC(year, month - 1, day)), label);
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const easterMonth = Math.floor((h + l - 7 * m + 114) / 31);
+  const easterDay = ((h + l - 7 * m + 114) % 31) + 1;
+  const easter = new Date(Date.UTC(year, easterMonth - 1, easterDay));
+  const relative = (days: number, label: string) => {
+    const date = new Date(easter);
+    date.setUTCDate(date.getUTCDate() + days);
+    add(date, label);
+  };
+  fixed(1, 1, "Neujahr"); fixed(1, 6, "Heilige Drei Könige"); fixed(5, 1, "Tag der Arbeit");
+  fixed(10, 3, "Tag der Dt. Einheit"); fixed(10, 31, "Reformationstag"); fixed(11, 1, "Allerheiligen");
+  fixed(12, 24, "Heiligabend"); fixed(12, 25, "1. Weihnachtstag"); fixed(12, 26, "2. Weihnachtstag"); fixed(12, 31, "Silvester");
+  relative(-48, "Rosenmontag"); relative(-2, "Karfreitag"); relative(0, "Ostern"); relative(1, "Ostermontag");
+  relative(39, "Christi Himmelfahrt"); relative(49, "Pfingsten"); relative(50, "Pfingstmontag"); relative(60, "Fronleichnam");
+  const mothersDay = new Date(Date.UTC(year, 4, 8));
+  mothersDay.setUTCDate(mothersDay.getUTCDate() + ((7 - mothersDay.getUTCDay()) % 7));
+  add(mothersDay, "Muttertag");
+  const firstAdvent = new Date(Date.UTC(year, 10, 27));
+  firstAdvent.setUTCDate(firstAdvent.getUTCDate() + ((7 - firstAdvent.getUTCDay()) % 7));
+  add(firstAdvent, "1. Advent");
+  return holidays;
+}
+
+export async function createBookingCalendar(bookings: Booking[], year: number) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(calendarTemplateFile);
   const calendar = workbook.getWorksheet("Kalender 2027");
   if (!calendar) throw new Error("Das Kalenderblatt der Excel-Vorlage fehlt.");
+  const weekdayNames = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  const holidays = calendarHolidays(year);
+  const sourceStyles = {
+    weekdayDay: structuredClone(calendar.getCell("A6").style), weekdayName: structuredClone(calendar.getCell("B6").style),
+    saturdayDay: structuredClone(calendar.getCell("A4").style), saturdayName: structuredClone(calendar.getCell("B4").style),
+    sundayDay: structuredClone(calendar.getCell("A5").style), sundayName: structuredClone(calendar.getCell("B5").style),
+    holidayDay: structuredClone(calendar.getCell("A3").style), holidayName: structuredClone(calendar.getCell("B3").style),
+    info: structuredClone(calendar.getCell("C6").style), holidayInfo: structuredClone(calendar.getCell("C3").style),
+    week: structuredClone(calendar.getCell("D6").style),
+  };
+  for (const range of [...calendar.model.merges]) {
+    const startRow = Number(range.match(/\d+/)?.[0] ?? 0);
+    if (startRow >= 3 && startRow <= 33) calendar.unMergeCells(range);
+  }
+  calendar.name = `Kalender ${year}`;
+  calendar.getCell("A1").value = `Kalender ${year}`;
+  for (let month = 0; month < 12; month += 1) {
+    const firstColumn = month * 4 + 1;
+    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    for (let day = 1; day <= 31; day += 1) {
+      const cells = [0, 1, 2, 3].map((offset) => calendar.getCell(day + 2, firstColumn + offset));
+      if (day > daysInMonth) {
+        cells.forEach((cell) => { cell.value = null; cell.style = {}; });
+        continue;
+      }
+      const date = new Date(Date.UTC(year, month, day));
+      const key = date.toISOString().slice(0, 10);
+      const holiday = holidays.get(key);
+      const weekday = date.getUTCDay();
+      cells[0].value = day;
+      cells[1].value = weekdayNames[weekday];
+      cells[2].value = holiday ?? null;
+      cells[3].value = weekday === 1 ? isoWeek(date) : null;
+      cells[0].style = structuredClone(holiday ? sourceStyles.holidayDay : weekday === 6 ? sourceStyles.saturdayDay : weekday === 0 ? sourceStyles.sundayDay : sourceStyles.weekdayDay);
+      cells[1].style = structuredClone(holiday ? sourceStyles.holidayName : weekday === 6 ? sourceStyles.saturdayName : weekday === 0 ? sourceStyles.sundayName : sourceStyles.weekdayName);
+      cells[2].style = structuredClone(holiday ? sourceStyles.holidayInfo : sourceStyles.info);
+      cells[3].style = structuredClone(sourceStyles.week);
+    }
+  }
 
   const exportedBookings = bookings
     .map((booking) => ({ ...booking, status: normalizedStatus(booking.status) }))
     .filter((booking): booking is Booking & { status: "reserved" | "booked" } => booking.status === "reserved" || booking.status === "booked")
+    .filter((booking) => booking.departure > `${year}-01-01` && booking.arrival < `${year + 1}-01-01`)
     .sort((a, b) => a.arrival.localeCompare(b.arrival));
   const fills = {
     reserved: { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFD966" } },
@@ -339,9 +429,9 @@ async function createBookingCalendar(bookings: Booking[]) {
   for (const booking of exportedBookings) {
     const start = excelDate(booking.arrival);
     const end = excelDate(booking.departure);
-    const firstVisibleNight = Math.max(start.getTime(), Date.UTC(2027, 0, 1));
+    const firstVisibleNight = Math.max(start.getTime(), Date.UTC(year, 0, 1));
     for (const date = new Date(start); date < end; date.setUTCDate(date.getUTCDate() + 1)) {
-      if (date.getUTCFullYear() !== 2027) continue;
+      if (date.getUTCFullYear() !== year) continue;
       const row = date.getUTCDate() + 2;
       const firstColumn = date.getUTCMonth() * 4 + 1;
       for (let column = firstColumn; column <= firstColumn + 2; column += 1) {
@@ -382,7 +472,7 @@ async function createBookingCalendar(bookings: Booking[]) {
     printArea: "A1:AV36",
     margins: { left: 0.25, right: 0.25, top: 0.3, bottom: 0.35, header: 0.15, footer: 0.2 },
   };
-  calendar.headerFooter.oddFooter = "&LKalender 2027&CStand: &D&RSeite &P von &N";
+  calendar.headerFooter.oddFooter = `&LKalender ${year}&CStand: &D&RSeite &P von &N`;
 
   const details = workbook.addWorksheet("Buchungen", {
     views: [{ state: "frozen", ySplit: 1 }],
@@ -437,19 +527,20 @@ async function createBookingCalendar(bookings: Booking[]) {
   return workbook.xlsx.writeBuffer();
 }
 
-function printableBookings(bookings: Booking[]) {
+function printableBookings(bookings: Booking[], year: number) {
   return bookings
     .map((booking) => ({ ...booking, status: normalizedStatus(booking.status) }))
     .filter((booking): booking is Booking & { status: "reserved" | "booked" } => booking.status === "reserved" || booking.status === "booked")
+    .filter((booking) => booking.departure > `${year}-01-01` && booking.arrival < `${year + 1}-01-01`)
     .sort((a, b) => a.arrival.localeCompare(b.arrival));
 }
 
-export function createBookingCalendarPdf(bookings: Booking[]) {
-  const exportedBookings = printableBookings(bookings);
+export function createBookingCalendarPdf(bookings: Booking[], year = 2027) {
+  const exportedBookings = printableBookings(bookings, year);
   const document = new PDFDocument({
     autoFirstPage: false,
     bufferPages: true,
-    info: { Title: "Kalender 2027 – CASA BAIA SANT'ANNA", Author: "CASA BAIA SANT'ANNA" },
+    info: { Title: `Kalender ${year} – CASA BAIA SANT'ANNA`, Author: "CASA BAIA SANT'ANNA" },
   });
   const chunks: Buffer[] = [];
   document.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -473,39 +564,25 @@ export function createBookingCalendarPdf(bookings: Booking[]) {
   const monthHeaderHeight = 21;
   const dayRowHeight = 14.45;
   const dayWidths = [0.21, 0.24, 0.38, 0.17].map((ratio) => monthWidth * ratio);
-  const holidays: Record<string, string> = {
-    "2027-01-01": "Neujahr", "2027-01-06": "Heilige Drei Könige", "2027-02-08": "Rosenmontag",
-    "2027-03-26": "Karfreitag", "2027-03-28": "Ostern", "2027-03-29": "Ostermontag",
-    "2027-05-01": "Tag der Arbeit", "2027-05-06": "Christi Himmelfahrt", "2027-05-09": "Muttertag",
-    "2027-05-16": "Pfingsten", "2027-05-17": "Pfingstmontag", "2027-05-27": "Fronleichnam",
-    "2027-10-03": "Tag der Dt. Einheit", "2027-10-31": "Reformationstag", "2027-11-01": "Allerheiligen",
-    "2027-11-28": "1. Advent", "2027-12-24": "Heiligabend", "2027-12-25": "1. Weihnachtstag",
-    "2027-12-26": "2. Weihnachtstag", "2027-12-31": "Silvester",
-  };
-  const isoWeek = (date: Date) => {
-    const thursday = new Date(date);
-    thursday.setUTCDate(thursday.getUTCDate() + 4 - (thursday.getUTCDay() || 7));
-    const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
-    return Math.ceil((((thursday.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
-  };
+  const holidays = calendarHolidays(year);
 
-  document.fillColor(colors.text).font("Helvetica-Bold").fontSize(26).text("Kalender 2027", calendarLeft, 19);
+  document.fillColor(colors.text).font("Helvetica-Bold").fontSize(26).text(`Kalender ${year}`, calendarLeft, 19);
   document.fillColor(colors.muted).font("Helvetica").fontSize(7).text("CASA BAIA SANT'ANNA", 650, 27, { width: 173, align: "right", lineBreak: false });
   for (let month = 0; month < 12; month += 1) {
     const x = calendarLeft + month * monthWidth;
-    const daysInMonth = new Date(Date.UTC(2027, month + 1, 0)).getUTCDate();
+    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     document.rect(x, monthHeaderY, monthWidth, monthHeaderHeight).lineWidth(0.45).stroke(colors.text);
     document.fillColor(colors.text).font("Helvetica-Bold").fontSize(7.4).text(monthNames[month], x + 2, monthHeaderY + 7, { width: monthWidth - 4, align: "center", lineBreak: false });
     for (let day = 1; day <= 31; day += 1) {
       const rowY = monthHeaderY + monthHeaderHeight + (day - 1) * dayRowHeight;
       if (day > daysInMonth) continue;
-      const date = new Date(Date.UTC(2027, month, day));
+      const date = new Date(Date.UTC(year, month, day));
       const key = dateKey(date);
       const booking = bookingForDate(key);
       const weekdayIndex = (date.getUTCDay() + 6) % 7;
       const isSunday = weekdayIndex === 6;
       const isSaturday = weekdayIndex === 5;
-      const isHoliday = key in holidays;
+      const isHoliday = holidays.has(key);
       const baseFill = isHoliday ? "#FFD9D9" : isSunday ? "#FFCC99" : isSaturday ? "#F0E7F3" : "#FFFFFF";
       document.rect(x, rowY, monthWidth, dayRowHeight).fill(baseFill);
       if (booking) document.rect(x, rowY, dayWidths[0] + dayWidths[1] + dayWidths[2], dayRowHeight).fill(colors[booking.status]);
@@ -519,9 +596,9 @@ export function createBookingCalendarPdf(bookings: Booking[]) {
         .text(String(day), x + 1, rowY + 4.2, { width: dayWidths[0] - 2, align: "center", lineBreak: false });
       document.fontSize(4.8).text(weekDays[weekdayIndex], x + dayWidths[0], rowY + 4.5, { width: dayWidths[1], align: "center", lineBreak: false });
 
-      let info = holidays[key] ?? "";
+      let info = holidays.get(key) ?? "";
       if (booking) {
-        const monthStart = `2027-${String(month + 1).padStart(2, "0")}-01`;
+        const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
         const segmentStart = booking.arrival > monthStart ? booking.arrival : monthStart;
         if (key === segmentStart) {
           info = info ? `${info} · ${booking.name}` : booking.name;
@@ -550,7 +627,7 @@ export function createBookingCalendarPdf(bookings: Booking[]) {
   document.fillColor(colors.muted).fontSize(5.5).text(`Erstellt am ${new Intl.DateTimeFormat("de-DE").format(new Date())}`, 650, legendY + 1.5, { width: 173, align: "right", lineBreak: false });
 
   document.addPage({ size: "A4", layout: "landscape", margins: { top: page.margin, bottom: page.margin, left: page.margin, right: page.margin } });
-  document.fillColor(colors.text).font("Helvetica-Bold").fontSize(18).text("Buchungsübersicht 2027", page.margin, 28);
+  document.fillColor(colors.text).font("Helvetica-Bold").fontSize(18).text(`Buchungsübersicht ${year}`, page.margin, 28);
   document.fillColor(colors.muted).font("Helvetica").fontSize(7).text("Nur reservierte und gebuchte Aufenthalte · vertraulich", page.margin, 51);
   const columns = [
     { label: "Status", x: page.margin, width: 75 },
@@ -569,7 +646,6 @@ export function createBookingCalendarPdf(bookings: Booking[]) {
   };
   drawTableHeader();
   for (const booking of exportedBookings) {
-    if (booking.departure <= "2027-01-01" || booking.arrival >= "2028-01-01") continue;
     if (tableY > 535) {
       document.addPage({ size: "A4", layout: "landscape", margins: { top: page.margin, bottom: page.margin, left: page.margin, right: page.margin } });
       tableY = 38;
@@ -582,8 +658,8 @@ export function createBookingCalendarPdf(bookings: Booking[]) {
     columns.forEach((column, index) => document.text(values[index], column.x + 4, tableY + 7, { width: column.width - 8, ellipsis: true, lineBreak: false }));
     tableY += 22;
   }
-  if (!exportedBookings.some((booking) => booking.departure > "2027-01-01" && booking.arrival < "2028-01-01")) {
-    document.fillColor(colors.muted).font("Helvetica").fontSize(9).text("Für 2027 sind keine reservierten oder gebuchten Aufenthalte vorhanden.", page.margin + 5, tableY + 14);
+  if (exportedBookings.length === 0) {
+    document.fillColor(colors.muted).font("Helvetica").fontSize(9).text(`Für ${year} sind keine reservierten oder gebuchten Aufenthalte vorhanden.`, page.margin + 5, tableY + 14);
   }
   document.end();
   return result;
@@ -695,12 +771,17 @@ app.get("/api/admin/bookings", async (_request, response, next) => {
   }
 });
 
-app.get("/api/admin/bookings/export.xlsx", async (_request, response, next) => {
+app.get("/api/admin/bookings/export.xlsx", async (request, response, next) => {
   try {
-    const file = await createBookingCalendar(await readBookings());
+    const year = calendarExportYear(request.query.year);
+    if (!year) {
+      response.status(400).json({ message: "Bitte wählen Sie ein Kalenderjahr zwischen 2020 und 2100." });
+      return;
+    }
+    const file = await createBookingCalendar(await readBookings(), year);
     response.set({
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": "attachment; filename=kalender-2027-buchungen.xlsx",
+      "Content-Disposition": `attachment; filename=kalender-${year}-buchungen.xlsx`,
       "Cache-Control": "no-store",
     });
     response.send(Buffer.from(file));
@@ -709,12 +790,17 @@ app.get("/api/admin/bookings/export.xlsx", async (_request, response, next) => {
   }
 });
 
-app.get("/api/admin/bookings/export.pdf", async (_request, response, next) => {
+app.get("/api/admin/bookings/export.pdf", async (request, response, next) => {
   try {
-    const file = await createBookingCalendarPdf(await readBookings());
+    const year = calendarExportYear(request.query.year);
+    if (!year) {
+      response.status(400).json({ message: "Bitte wählen Sie ein Kalenderjahr zwischen 2020 und 2100." });
+      return;
+    }
+    const file = await createBookingCalendarPdf(await readBookings(), year);
     response.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": "attachment; filename=kalender-2027-buchungen.pdf",
+      "Content-Disposition": `attachment; filename=kalender-${year}-buchungen.pdf`,
       "Cache-Control": "no-store",
     });
     response.send(file);

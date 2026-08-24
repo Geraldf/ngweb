@@ -101,6 +101,8 @@ const minimumStayNights = 10;
 const cleaningFee = 150;
 const laundryFeePerGuest = 25;
 const defaultPricing: Pricing = { lowSeason: 120, midSeason: 160, highSeason: 210 };
+const currentYear = new Date().getFullYear();
+const calendarExportYears = Array.from({ length: 13 }, (_, index) => currentYear - 2 + index);
 
 function trackEvent(name: string, detail: Record<string, string | number> = {}) {
   window.dispatchEvent(new CustomEvent("casa:analytics", { detail: { name, ...detail } }));
@@ -136,6 +138,7 @@ function App() {
   const [adminToken, setAdminToken] = useState("");
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   const [adminBookings, setAdminBookings] = useState<AdminBooking[]>([]);
+  const [calendarExportYear, setCalendarExportYear] = useState(currentYear + 1);
   const [adminError, setAdminError] = useState("");
   const [adminBusy, setAdminBusy] = useState(false);
   const [migrationBusy, setMigrationBusy] = useState(false);
@@ -509,12 +512,12 @@ function App() {
     setAdminBusy(true);
     setAdminError("");
     try {
-      const response = await authenticatedRequest(`${apiBase}/api/admin/bookings/export.xlsx`);
+      const response = await authenticatedRequest(`${apiBase}/api/admin/bookings/export.xlsx?year=${calendarExportYear}`);
       if (!response.ok) throw new Error((await response.json() as { message?: string }).message ?? "Excel-Export fehlgeschlagen.");
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = url;
-      link.download = "kalender-2027-buchungen.xlsx";
+      link.download = `kalender-${calendarExportYear}-buchungen.xlsx`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -528,12 +531,12 @@ function App() {
     setAdminBusy(true);
     setAdminError("");
     try {
-      const response = await authenticatedRequest(`${apiBase}/api/admin/bookings/export.pdf`);
+      const response = await authenticatedRequest(`${apiBase}/api/admin/bookings/export.pdf?year=${calendarExportYear}`);
       if (!response.ok) throw new Error((await response.json() as { message?: string }).message ?? "PDF-Export fehlgeschlagen.");
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = url;
-      link.download = "kalender-2027-buchungen.pdf";
+      link.download = `kalender-${calendarExportYear}-buchungen.pdf`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -952,6 +955,7 @@ function App() {
             </aside>}
             <div className="booking-manager-actions">
               <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Bitte warten …" : "Buchungen neu laden"}</button>
+              <label className="calendar-export-year">Kalenderjahr<select value={calendarExportYear} disabled={adminBusy} onChange={(event) => setCalendarExportYear(Number(event.target.value))}>{calendarExportYears.map((year) => <option value={year} key={year}>{year}</option>)}</select></label>
               <button className="export-bookings-button" type="button" disabled={adminBusy} onClick={() => void exportBookingCalendar()}>Druckfertigen Excel-Kalender herunterladen</button>
               <button className="export-bookings-button" type="button" disabled={adminBusy} onClick={() => void exportBookingCalendarPdf()}>Druckfertigen PDF-Kalender herunterladen</button>
             </div>
