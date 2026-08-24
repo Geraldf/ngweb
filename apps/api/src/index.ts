@@ -329,6 +329,11 @@ async function createBookingCalendar(bookings: Booking[]) {
     reserved: { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFD966" } },
     booked: { type: "pattern", pattern: "solid", fgColor: { argb: "FF70AD47" } },
   } satisfies Record<"reserved" | "booked", ExcelJS.Fill>;
+  const applyFill = (cell: ExcelJS.Cell, fill: ExcelJS.Fill) => {
+    // Template cells share style objects. Replacing the complete style keeps a
+    // fill change local instead of recoloring every cell using that style.
+    cell.style = { ...cell.style, fill };
+  };
 
   for (const booking of exportedBookings) {
     const start = excelDate(booking.arrival);
@@ -338,7 +343,7 @@ async function createBookingCalendar(bookings: Booking[]) {
       const row = date.getUTCDate() + 2;
       const firstColumn = date.getUTCMonth() * 4 + 1;
       for (let column = firstColumn; column <= firstColumn + 2; column += 1) {
-        calendar.getCell(row, column).fill = fills[booking.status];
+        applyFill(calendar.getCell(row, column), fills[booking.status]);
       }
       calendar.getCell(row, firstColumn).note = `${booking.status === "booked" ? "Gebucht" : "Reserviert"}: ${booking.name}\n${booking.arrival} – ${booking.departure}`;
     }
@@ -347,9 +352,9 @@ async function createBookingCalendar(bookings: Booking[]) {
   calendar.getCell("A36").value = "Legende";
   calendar.getCell("A36").font = { bold: true };
   calendar.getCell("B36").value = "Reserviert";
-  calendar.getCell("B36").fill = fills.reserved;
+  applyFill(calendar.getCell("B36"), fills.reserved);
   calendar.getCell("D36").value = "Gebucht";
-  calendar.getCell("D36").fill = fills.booked;
+  applyFill(calendar.getCell("D36"), fills.booked);
   calendar.pageSetup.printArea = "A1:AV36";
 
   const details = workbook.addWorksheet("Buchungen", {
@@ -383,7 +388,7 @@ async function createBookingCalendar(bookings: Booking[]) {
     });
     row.getCell("arrival").numFmt = "dd.mm.yyyy";
     row.getCell("departure").numFmt = "dd.mm.yyyy";
-    row.getCell("status").fill = fills[booking.status];
+    applyFill(row.getCell("status"), fills[booking.status]);
     row.alignment = { vertical: "top", wrapText: true };
   }
   details.getColumn("email").eachCell((cell, rowNumber) => {
