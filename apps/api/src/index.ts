@@ -537,6 +537,11 @@ export function createBookingCalendarPdf(bookings: Booking[]) {
       }
     }
   }
+  const calendarBottom = monthHeaderY + monthHeaderHeight + 31 * dayRowHeight;
+  for (let month = 1; month < 12; month += 1) {
+    const separatorX = calendarLeft + month * monthWidth;
+    document.moveTo(separatorX, monthHeaderY).lineTo(separatorX, calendarBottom).lineWidth(0.9).stroke("#5E625C");
+  }
   const legendY = 535;
   document.rect(calendarLeft, legendY, 9, 9).fill(colors.reserved);
   document.fillColor(colors.text).font("Helvetica").fontSize(5.5).text("Reserviert", calendarLeft + 13, legendY + 1.5, { lineBreak: false });
