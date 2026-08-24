@@ -5,6 +5,7 @@ import express from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { access, mkdir, mkdtemp, readFile, readdir, rename, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import PDFDocument from "pdfkit";
 
 dotenv.config({ path: path.resolve(import.meta.dirname, "../../../.env") });
 
@@ -436,6 +437,125 @@ async function createBookingCalendar(bookings: Booking[]) {
   return workbook.xlsx.writeBuffer();
 }
 
+function printableBookings(bookings: Booking[]) {
+  return bookings
+    .map((booking) => ({ ...booking, status: normalizedStatus(booking.status) }))
+    .filter((booking): booking is Booking & { status: "reserved" | "booked" } => booking.status === "reserved" || booking.status === "booked")
+    .sort((a, b) => a.arrival.localeCompare(b.arrival));
+}
+
+export function createBookingCalendarPdf(bookings: Booking[]) {
+  const exportedBookings = printableBookings(bookings);
+  const document = new PDFDocument({
+    autoFirstPage: false,
+    bufferPages: true,
+    info: { Title: "Kalender 2027 – CASA BAIA SANT'ANNA", Author: "CASA BAIA SANT'ANNA" },
+  });
+  const chunks: Buffer[] = [];
+  document.on("data", (chunk: Buffer) => chunks.push(chunk));
+  const result = new Promise<Buffer>((resolve, reject) => {
+    document.on("end", () => resolve(Buffer.concat(chunks)));
+    document.on("error", reject);
+  });
+
+  const page = { width: 841.89, height: 595.28, margin: 28 };
+  const colors = { text: "#263127", muted: "#777A70", line: "#C9C7BD", reserved: "#FFD966", booked: "#70AD47" };
+  const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+  const weekDays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+  const dateKey = (date: Date) => date.toISOString().slice(0, 10);
+  const bookingForDate = (key: string) => exportedBookings.find((booking) => booking.arrival <= key && key < booking.departure);
+
+  document.addPage({ size: "A4", layout: "landscape", margins: { top: page.margin, bottom: page.margin, left: page.margin, right: page.margin } });
+  document.fillColor(colors.text).font("Helvetica-Bold").fontSize(20).text("Belegungskalender 2027", page.margin, 24);
+  document.fillColor(colors.muted).font("Helvetica").fontSize(7).text("CASA BAIA SANT'ANNA · Sardegna", page.margin, 48);
+  const legendY = 29;
+  document.rect(665, legendY, 10, 10).fill(colors.reserved).fillColor(colors.text).fontSize(7).text("Reserviert", 680, legendY + 1);
+  document.rect(744, legendY, 10, 10).fill(colors.booked).fillColor(colors.text).text("Gebucht", 759, legendY + 1);
+
+  const gridTop = 67;
+  const gridWidth = page.width - page.margin * 2;
+  const gridHeight = 485;
+  const monthWidth = gridWidth / 4;
+  const monthHeight = gridHeight / 3;
+  for (let month = 0; month < 12; month += 1) {
+    const x = page.margin + (month % 4) * monthWidth;
+    const y = gridTop + Math.floor(month / 4) * monthHeight;
+    const innerX = x + 6;
+    const innerWidth = monthWidth - 12;
+    const cellWidth = innerWidth / 7;
+    const cellHeight = 17;
+    document.rect(x, y, monthWidth, monthHeight).lineWidth(0.4).stroke(colors.line);
+    document.fillColor(colors.text).font("Helvetica-Bold").fontSize(10).text(monthNames[month], innerX, y + 7, { width: innerWidth });
+    weekDays.forEach((day, index) => {
+      document.fillColor(colors.muted).font("Helvetica-Bold").fontSize(5.5).text(day, innerX + index * cellWidth, y + 24, { width: cellWidth, align: "center" });
+    });
+
+    const firstDay = new Date(Date.UTC(2027, month, 1));
+    const leadingDays = (firstDay.getUTCDay() + 6) % 7;
+    const daysInMonth = new Date(Date.UTC(2027, month + 1, 0)).getUTCDate();
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const position = leadingDays + day - 1;
+      const column = position % 7;
+      const row = Math.floor(position / 7);
+      const cellX = innerX + column * cellWidth;
+      const cellY = y + 34 + row * cellHeight;
+      const key = dateKey(new Date(Date.UTC(2027, month, day)));
+      const booking = bookingForDate(key);
+      if (booking) document.rect(cellX + 0.5, cellY + 0.5, cellWidth - 1, cellHeight - 1).fill(colors[booking.status]);
+      document.rect(cellX, cellY, cellWidth, cellHeight).lineWidth(0.2).stroke(colors.line);
+      document.fillColor(colors.text).font("Helvetica").fontSize(6).text(String(day), cellX + 2, cellY + 2, { width: cellWidth - 4 });
+      if (booking) {
+        const monthStart = `2027-${String(month + 1).padStart(2, "0")}-01`;
+        const segmentStart = booking.arrival > monthStart ? booking.arrival : monthStart;
+        if (key === segmentStart) {
+          const surname = booking.name.trim().split(/\s+/).at(-1) ?? booking.name;
+          document.font("Helvetica-Bold").fontSize(4.6).text(surname.slice(0, 16), cellX + 2, cellY + 9, { width: cellWidth - 4, ellipsis: true, lineBreak: false });
+        }
+      }
+    }
+  }
+  document.fillColor(colors.muted).font("Helvetica").fontSize(6).text(`Erstellt am ${new Intl.DateTimeFormat("de-DE").format(new Date())}`, page.margin, 555, { width: gridWidth, align: "right", lineBreak: false });
+
+  document.addPage({ size: "A4", layout: "landscape", margins: { top: page.margin, bottom: page.margin, left: page.margin, right: page.margin } });
+  document.fillColor(colors.text).font("Helvetica-Bold").fontSize(18).text("Buchungsübersicht 2027", page.margin, 28);
+  document.fillColor(colors.muted).font("Helvetica").fontSize(7).text("Nur reservierte und gebuchte Aufenthalte · vertraulich", page.margin, 51);
+  const columns = [
+    { label: "Status", x: page.margin, width: 75 },
+    { label: "Anreise", x: 108, width: 75 },
+    { label: "Abreise", x: 190, width: 75 },
+    { label: "Name", x: 272, width: 235 },
+    { label: "Gäste", x: 514, width: 55 },
+    { label: "Nächte", x: 576, width: 55 },
+  ];
+  let tableY = 76;
+  const drawTableHeader = () => {
+    document.rect(page.margin, tableY, 610, 20).fill(colors.text);
+    document.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(7);
+    columns.forEach((column) => document.text(column.label, column.x + 4, tableY + 6, { width: column.width - 8 }));
+    tableY += 20;
+  };
+  drawTableHeader();
+  for (const booking of exportedBookings) {
+    if (booking.departure <= "2027-01-01" || booking.arrival >= "2028-01-01") continue;
+    if (tableY > 535) {
+      document.addPage({ size: "A4", layout: "landscape", margins: { top: page.margin, bottom: page.margin, left: page.margin, right: page.margin } });
+      tableY = 38;
+      drawTableHeader();
+    }
+    const nights = Math.round((excelDate(booking.departure).getTime() - excelDate(booking.arrival).getTime()) / 86_400_000);
+    document.rect(page.margin, tableY, 610, 22).fill(booking.status === "booked" ? "#E1EBDD" : "#FFF4CD");
+    document.fillColor(colors.text).font("Helvetica").fontSize(7);
+    const values = [booking.status === "booked" ? "Gebucht" : "Reserviert", booking.arrival, booking.departure, booking.name, String(booking.guests), String(nights)];
+    columns.forEach((column, index) => document.text(values[index], column.x + 4, tableY + 7, { width: column.width - 8, ellipsis: true, lineBreak: false }));
+    tableY += 22;
+  }
+  if (!exportedBookings.some((booking) => booking.departure > "2027-01-01" && booking.arrival < "2028-01-01")) {
+    document.fillColor(colors.muted).font("Helvetica").fontSize(9).text("Für 2027 sind keine reservierten oder gebuchten Aufenthalte vorhanden.", page.margin + 5, tableY + 14);
+  }
+  document.end();
+  return result;
+}
+
 function requireAdmin(request: express.Request, response: express.Response, next: express.NextFunction) {
   const expected = process.env.ADMIN_TOKEN;
   if (!expected) {
@@ -551,6 +671,20 @@ app.get("/api/admin/bookings/export.xlsx", async (_request, response, next) => {
       "Cache-Control": "no-store",
     });
     response.send(Buffer.from(file));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/admin/bookings/export.pdf", async (_request, response, next) => {
+  try {
+    const file = await createBookingCalendarPdf(await readBookings());
+    response.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": "attachment; filename=kalender-2027-buchungen.pdf",
+      "Cache-Control": "no-store",
+    });
+    response.send(file);
   } catch (error) {
     next(error);
   }

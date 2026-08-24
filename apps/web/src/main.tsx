@@ -524,6 +524,25 @@ function App() {
     }
   };
 
+  const exportBookingCalendarPdf = async () => {
+    setAdminBusy(true);
+    setAdminError("");
+    try {
+      const response = await authenticatedRequest(`${apiBase}/api/admin/bookings/export.pdf`);
+      if (!response.ok) throw new Error((await response.json() as { message?: string }).message ?? "PDF-Export fehlgeschlagen.");
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "kalender-2027-buchungen.pdf";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : "PDF-Export fehlgeschlagen.");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
   const exportMigration = async () => {
     setMigrationBusy(true);
     setMigrationStatus("");
@@ -934,6 +953,7 @@ function App() {
             <div className="booking-manager-actions">
               <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Bitte warten …" : "Buchungen neu laden"}</button>
               <button className="export-bookings-button" type="button" disabled={adminBusy} onClick={() => void exportBookingCalendar()}>Druckfertigen Excel-Kalender herunterladen</button>
+              <button className="export-bookings-button" type="button" disabled={adminBusy} onClick={() => void exportBookingCalendarPdf()}>Druckfertigen PDF-Kalender herunterladen</button>
             </div>
             {adminError && <p className="manager-error" role="alert">{adminError}</p>}
             <form className="booking-create" onSubmit={createAdminBooking}>
