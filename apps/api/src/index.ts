@@ -338,6 +338,7 @@ async function createBookingCalendar(bookings: Booking[]) {
   for (const booking of exportedBookings) {
     const start = excelDate(booking.arrival);
     const end = excelDate(booking.departure);
+    const firstVisibleNight = Math.max(start.getTime(), Date.UTC(2027, 0, 1));
     for (const date = new Date(start); date < end; date.setUTCDate(date.getUTCDate() + 1)) {
       if (date.getUTCFullYear() !== 2027) continue;
       const row = date.getUTCDate() + 2;
@@ -346,6 +347,18 @@ async function createBookingCalendar(bookings: Booking[]) {
         applyFill(calendar.getCell(row, column), fills[booking.status]);
       }
       calendar.getCell(row, firstColumn).note = `${booking.status === "booked" ? "Gebucht" : "Reserviert"}: ${booking.name}\n${booking.arrival} – ${booking.departure}`;
+
+      if (date.getTime() === firstVisibleNight || date.getUTCDate() === 1) {
+        const nameCell = calendar.getCell(row, firstColumn + 2);
+        const existingText = typeof nameCell.value === "string" ? nameCell.value.trim() : "";
+        nameCell.value = existingText ? `${existingText}\n${booking.name}` : booking.name;
+        nameCell.style = {
+          ...nameCell.style,
+          font: { ...nameCell.font, bold: true, size: 7, color: { argb: "FF1E2A20" } },
+          alignment: { ...nameCell.alignment, vertical: "middle", wrapText: true, shrinkToFit: true },
+        };
+        calendar.getRow(row).height = Math.max(calendar.getRow(row).height ?? 0, existingText ? 26 : 20);
+      }
     }
   }
 
