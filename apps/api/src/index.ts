@@ -466,55 +466,83 @@ export function createBookingCalendarPdf(bookings: Booking[]) {
   const bookingForDate = (key: string) => exportedBookings.find((booking) => booking.arrival <= key && key < booking.departure);
 
   document.addPage({ size: "A4", layout: "landscape", margins: { top: page.margin, bottom: page.margin, left: page.margin, right: page.margin } });
-  document.fillColor(colors.text).font("Helvetica-Bold").fontSize(20).text("Belegungskalender 2027", page.margin, 24);
-  document.fillColor(colors.muted).font("Helvetica").fontSize(7).text("CASA BAIA SANT'ANNA · Sardegna", page.margin, 48);
-  const legendY = 29;
-  document.rect(665, legendY, 10, 10).fill(colors.reserved).fillColor(colors.text).fontSize(7).text("Reserviert", 680, legendY + 1);
-  document.rect(744, legendY, 10, 10).fill(colors.booked).fillColor(colors.text).text("Gebucht", 759, legendY + 1);
+  const calendarLeft = 18;
+  const calendarWidth = page.width - calendarLeft * 2;
+  const monthWidth = calendarWidth / 12;
+  const monthHeaderY = 57;
+  const monthHeaderHeight = 21;
+  const dayRowHeight = 14.45;
+  const dayWidths = [0.21, 0.24, 0.38, 0.17].map((ratio) => monthWidth * ratio);
+  const holidays: Record<string, string> = {
+    "2027-01-01": "Neujahr", "2027-01-06": "Heilige Drei Könige", "2027-02-08": "Rosenmontag",
+    "2027-03-26": "Karfreitag", "2027-03-28": "Ostern", "2027-03-29": "Ostermontag",
+    "2027-05-01": "Tag der Arbeit", "2027-05-06": "Christi Himmelfahrt", "2027-05-09": "Muttertag",
+    "2027-05-16": "Pfingsten", "2027-05-17": "Pfingstmontag", "2027-05-27": "Fronleichnam",
+    "2027-10-03": "Tag der Dt. Einheit", "2027-10-31": "Reformationstag", "2027-11-01": "Allerheiligen",
+    "2027-11-28": "1. Advent", "2027-12-24": "Heiligabend", "2027-12-25": "1. Weihnachtstag",
+    "2027-12-26": "2. Weihnachtstag", "2027-12-31": "Silvester",
+  };
+  const isoWeek = (date: Date) => {
+    const thursday = new Date(date);
+    thursday.setUTCDate(thursday.getUTCDate() + 4 - (thursday.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
+    return Math.ceil((((thursday.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
+  };
 
-  const gridTop = 67;
-  const gridWidth = page.width - page.margin * 2;
-  const gridHeight = 485;
-  const monthWidth = gridWidth / 4;
-  const monthHeight = gridHeight / 3;
+  document.fillColor(colors.text).font("Helvetica-Bold").fontSize(26).text("Kalender 2027", calendarLeft, 19);
+  document.fillColor(colors.muted).font("Helvetica").fontSize(7).text("CASA BAIA SANT'ANNA", 650, 27, { width: 173, align: "right", lineBreak: false });
   for (let month = 0; month < 12; month += 1) {
-    const x = page.margin + (month % 4) * monthWidth;
-    const y = gridTop + Math.floor(month / 4) * monthHeight;
-    const innerX = x + 6;
-    const innerWidth = monthWidth - 12;
-    const cellWidth = innerWidth / 7;
-    const cellHeight = 17;
-    document.rect(x, y, monthWidth, monthHeight).lineWidth(0.4).stroke(colors.line);
-    document.fillColor(colors.text).font("Helvetica-Bold").fontSize(10).text(monthNames[month], innerX, y + 7, { width: innerWidth });
-    weekDays.forEach((day, index) => {
-      document.fillColor(colors.muted).font("Helvetica-Bold").fontSize(5.5).text(day, innerX + index * cellWidth, y + 24, { width: cellWidth, align: "center" });
-    });
-
-    const firstDay = new Date(Date.UTC(2027, month, 1));
-    const leadingDays = (firstDay.getUTCDay() + 6) % 7;
+    const x = calendarLeft + month * monthWidth;
     const daysInMonth = new Date(Date.UTC(2027, month + 1, 0)).getUTCDate();
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      const position = leadingDays + day - 1;
-      const column = position % 7;
-      const row = Math.floor(position / 7);
-      const cellX = innerX + column * cellWidth;
-      const cellY = y + 34 + row * cellHeight;
-      const key = dateKey(new Date(Date.UTC(2027, month, day)));
+    document.rect(x, monthHeaderY, monthWidth, monthHeaderHeight).lineWidth(0.45).stroke(colors.text);
+    document.fillColor(colors.text).font("Helvetica-Bold").fontSize(7.4).text(monthNames[month], x + 2, monthHeaderY + 7, { width: monthWidth - 4, align: "center", lineBreak: false });
+    for (let day = 1; day <= 31; day += 1) {
+      const rowY = monthHeaderY + monthHeaderHeight + (day - 1) * dayRowHeight;
+      if (day > daysInMonth) continue;
+      const date = new Date(Date.UTC(2027, month, day));
+      const key = dateKey(date);
       const booking = bookingForDate(key);
-      if (booking) document.rect(cellX + 0.5, cellY + 0.5, cellWidth - 1, cellHeight - 1).fill(colors[booking.status]);
-      document.rect(cellX, cellY, cellWidth, cellHeight).lineWidth(0.2).stroke(colors.line);
-      document.fillColor(colors.text).font("Helvetica").fontSize(6).text(String(day), cellX + 2, cellY + 2, { width: cellWidth - 4 });
+      const weekdayIndex = (date.getUTCDay() + 6) % 7;
+      const isSunday = weekdayIndex === 6;
+      const isSaturday = weekdayIndex === 5;
+      const isHoliday = key in holidays;
+      const baseFill = isHoliday ? "#FFD9D9" : isSunday ? "#FFCC99" : isSaturday ? "#F0E7F3" : "#FFFFFF";
+      document.rect(x, rowY, monthWidth, dayRowHeight).fill(baseFill);
+      if (booking) document.rect(x, rowY, dayWidths[0] + dayWidths[1] + dayWidths[2], dayRowHeight).fill(colors[booking.status]);
+      let columnX = x;
+      dayWidths.forEach((width) => {
+        document.rect(columnX, rowY, width, dayRowHeight).lineWidth(0.18).stroke("#AFAFAF");
+        columnX += width;
+      });
+      const textColor = isHoliday && !booking ? "#CC0000" : colors.text;
+      document.fillColor(textColor).font(isSunday || isSaturday || isHoliday ? "Helvetica-Bold" : "Helvetica").fontSize(5.4)
+        .text(String(day), x + 1, rowY + 4.2, { width: dayWidths[0] - 2, align: "center", lineBreak: false });
+      document.fontSize(4.8).text(weekDays[weekdayIndex], x + dayWidths[0], rowY + 4.5, { width: dayWidths[1], align: "center", lineBreak: false });
+
+      let info = holidays[key] ?? "";
       if (booking) {
         const monthStart = `2027-${String(month + 1).padStart(2, "0")}-01`;
         const segmentStart = booking.arrival > monthStart ? booking.arrival : monthStart;
         if (key === segmentStart) {
-          const surname = booking.name.trim().split(/\s+/).at(-1) ?? booking.name;
-          document.font("Helvetica-Bold").fontSize(4.6).text(surname.slice(0, 16), cellX + 2, cellY + 9, { width: cellWidth - 4, ellipsis: true, lineBreak: false });
+          info = info ? `${info} · ${booking.name}` : booking.name;
         }
+      }
+      if (info) {
+        document.fillColor(booking ? colors.text : "#CC0000").font(booking ? "Helvetica-Bold" : "Helvetica").fontSize(3.6)
+          .text(info, x + dayWidths[0] + dayWidths[1] + 1, rowY + 4.7, { width: dayWidths[2] - 2, ellipsis: true, lineBreak: false });
+      }
+      if (date.getUTCDay() === 1) {
+        document.fillColor(colors.muted).font("Helvetica").fontSize(4)
+          .text(String(isoWeek(date)), x + dayWidths[0] + dayWidths[1] + dayWidths[2], rowY + 4.8, { width: dayWidths[3], align: "center", lineBreak: false });
       }
     }
   }
-  document.fillColor(colors.muted).font("Helvetica").fontSize(6).text(`Erstellt am ${new Intl.DateTimeFormat("de-DE").format(new Date())}`, page.margin, 555, { width: gridWidth, align: "right", lineBreak: false });
+  const legendY = 535;
+  document.rect(calendarLeft, legendY, 9, 9).fill(colors.reserved);
+  document.fillColor(colors.text).font("Helvetica").fontSize(5.5).text("Reserviert", calendarLeft + 13, legendY + 1.5, { lineBreak: false });
+  document.rect(calendarLeft + 74, legendY, 9, 9).fill(colors.booked);
+  document.fillColor(colors.text).text("Gebucht", calendarLeft + 87, legendY + 1.5, { lineBreak: false });
+  document.fillColor(colors.muted).fontSize(5.5).text(`Erstellt am ${new Intl.DateTimeFormat("de-DE").format(new Date())}`, 650, legendY + 1.5, { width: 173, align: "right", lineBreak: false });
 
   document.addPage({ size: "A4", layout: "landscape", margins: { top: page.margin, bottom: page.margin, left: page.margin, right: page.margin } });
   document.fillColor(colors.text).font("Helvetica-Bold").fontSize(18).text("Buchungsübersicht 2027", page.margin, 28);
