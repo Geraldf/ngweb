@@ -933,7 +933,7 @@ function App() {
             </aside>}
             <div className="booking-manager-actions">
               <button className="reload-bookings-button" type="button" disabled={adminBusy} onClick={() => void loadAdminBookings()}>{adminBusy ? "Bitte warten …" : "Buchungen neu laden"}</button>
-              <button className="export-bookings-button" type="button" disabled={adminBusy} onClick={() => void exportBookingCalendar()}>Excel-Kalender herunterladen</button>
+              <button className="export-bookings-button" type="button" disabled={adminBusy} onClick={() => void exportBookingCalendar()}>Druckfertigen Excel-Kalender herunterladen</button>
             </div>
             {adminError && <p className="manager-error" role="alert">{adminError}</p>}
             <form className="booking-create" onSubmit={createAdminBooking}>

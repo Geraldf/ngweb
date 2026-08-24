@@ -368,12 +368,37 @@ async function createBookingCalendar(bookings: Booking[]) {
   applyFill(calendar.getCell("B36"), fills.reserved);
   calendar.getCell("D36").value = "Gebucht";
   applyFill(calendar.getCell("D36"), fills.booked);
-  calendar.pageSetup.printArea = "A1:AV36";
+  calendar.pageSetup = {
+    ...calendar.pageSetup,
+    paperSize: 9,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 1,
+    horizontalCentered: true,
+    verticalCentered: true,
+    showGridLines: false,
+    printArea: "A1:AV36",
+    margins: { left: 0.25, right: 0.25, top: 0.3, bottom: 0.35, header: 0.15, footer: 0.2 },
+  };
+  calendar.headerFooter.oddFooter = "&LKalender 2027&CStand: &D&RSeite &P von &N";
 
   const details = workbook.addWorksheet("Buchungen", {
     views: [{ state: "frozen", ySplit: 1 }],
-    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+    pageSetup: {
+      paperSize: 9,
+      orientation: "landscape",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      horizontalCentered: true,
+      showGridLines: false,
+      printTitlesRow: "1:1",
+      margins: { left: 0.3, right: 0.3, top: 0.45, bottom: 0.45, header: 0.2, footer: 0.25 },
+    },
   });
+  details.headerFooter.oddHeader = "&L&BCASA BAIA SANT'ANNA&RReservierungen und Buchungen";
+  details.headerFooter.oddFooter = "&LVertraulich&CStand: &D&RSeite &P von &N";
   details.columns = [
     { header: "Status", key: "status", width: 14 },
     { header: "Anreise", key: "arrival", width: 13 },
