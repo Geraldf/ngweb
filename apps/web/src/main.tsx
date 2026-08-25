@@ -701,7 +701,7 @@ function App() {
           <a href="#casa"><span>Komfort</span><strong>1 Bad · Privatpool</strong></a>
           <a href="#lage"><span>Strand</span><strong>Wenige Minuten zu Fuß</strong></a>
           <a href="#lage"><span>Lage</span><strong>Baia Sant’Anna</strong></a>
-          <a href="#preise"><span>Preis</span><strong>Ab € 120 / Nacht</strong></a>
+          <a href="#preise"><span>Preis</span><strong>Ab € {pricing.lowSeason} / Nacht</strong></a>
         </nav>
 
         <section className="welcome" id="entdecken">
