@@ -76,8 +76,8 @@ footer { padding: 50px 5vw; background: #263127; color: #f3f0e8; display: grid; 
 .legal-copy h3 { margin: 0 0 18px; color: #263127; font-family: "Italiana", serif; font-size: 28px; font-weight: 400; }
 .site-credit { margin-top: 45px; text-transform: uppercase; letter-spacing: .12em; font-size: 10px; }
 
-.menu-panel { position: fixed; z-index: 20; inset: 0; background: #66725f; color: #fffdf7; padding: 40px 8vw 60px; transform: translateY(-102%); transition: transform .65s cubic-bezier(.7,0,.2,1); display: flex; flex-direction: column; }
-.menu-panel.is-open { transform: translateY(0); }
+.menu-panel { position: fixed; z-index: 20; inset: 0; background: #66725f; color: #fffdf7; padding: 40px 8vw 60px; transform: translateY(-102%); visibility: hidden; pointer-events: none; transition: transform .65s cubic-bezier(.7,0,.2,1), visibility 0s linear .65s; display: flex; flex-direction: column; }
+.menu-panel.is-open { transform: translateY(0); visibility: visible; pointer-events: auto; transition: transform .65s cubic-bezier(.7,0,.2,1); }
 .close-button { align-self: flex-end; color: inherit; border: 0; background: none; text-transform: uppercase; letter-spacing: .18em; font-size: 9px; cursor: pointer; }
 .close-button span { font-size: 25px; margin-left: 15px; vertical-align: middle; }
 .menu-panel nav { margin: auto 0; display: flex; flex-direction: column; }
