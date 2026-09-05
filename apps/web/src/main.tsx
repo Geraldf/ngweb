@@ -1,8 +1,6 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent, MouseEvent } from "react";
 import { createRoot } from "react-dom/client";
-import "@fontsource/dm-sans/latin-400.css";
-import "@fontsource/dm-sans/latin-600.css";
 import "@fontsource/italiana/latin-400.css";
 import webPackage from "../package.json";
 
