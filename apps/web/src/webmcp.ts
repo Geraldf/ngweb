@@ -26,7 +26,7 @@ declare global {
 
 // --- Implementation ---
 
-const mcpUrl = `${import.meta.env.VITE_API_URL ?? ""}/mcp`;
+const mcpUrl = "/mcp";
 
 type McpToolMeta = {
   name: string;

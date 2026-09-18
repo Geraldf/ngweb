@@ -65,7 +65,18 @@ const supportedTypes: Record<string, string> = {
   "image/gif": ".gif",
 };
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173" }));
+const allowedOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+const localhostOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const allowed = allowedOrigin.split(",").map((value) => value.trim());
+    if (allowed.includes(origin) || localhostOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
+}));
 
 app.get("/api/admin/migration/export", requireAdmin, async (_request, response, next) => {
   try {
