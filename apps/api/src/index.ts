@@ -1,3 +1,4 @@
+import { createMcpRouter, type McpToolSet } from "./mcp.js";
 import cors from "cors";
 import dotenv from "dotenv";
 import ExcelJS from "exceljs";
@@ -974,6 +975,196 @@ app.delete("/api/media/:id", requireAdmin, async (request, response, next) => {
     next(error);
   }
 });
+
+const minimumStayNights = MINIMUM_STAY_NIGHTS;
+const cleaningFee = 150;
+const laundryFeePerGuest = 25;
+
+function nightlyRate(date: Date, pricing: Pricing) {
+  const month = date.getUTCMonth();
+  return month <= 2 || month === 10 || month === 11 ? pricing.lowSeason : month <= 5 || month === 9 ? pricing.midSeason : pricing.highSeason;
+}
+
+// MCP tool definitions — exposed to AI agents via /mcp and the browser bridge.
+const mcpTools: McpToolSet = {
+  list_gallery_photos: {
+    name: "list_gallery_photos",
+    description: "List all gallery photos displayed on the Casa Baia Sant'Anna website with their titles.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+    handler: async () => {
+      const items = await readMedia();
+      const gallery = items.filter((item) => item.placement === "gallery").sort((a, b) => a.order - b.order);
+      return {
+        photos: gallery.map((item) => ({ id: item.id, title: item.title, placement: item.placement, order: item.order })),
+        total: gallery.length,
+      };
+    },
+  },
+  check_availability: {
+    name: "check_availability",
+    description: "Check whether a specific date range is available for booking.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        arrival: { type: "string", description: "Check-in date in YYYY-MM-DD format" },
+        departure: { type: "string", description: "Check-out date in YYYY-MM-DD format" },
+      },
+      required: ["arrival", "departure"],
+    },
+    handler: async (args) => {
+      const arrival = String(args.arrival ?? "");
+      const departure = String(args.departure ?? "");
+      if (!arrival || !departure) throw new Error("arrival and departure are required");
+      if (departure <= arrival) throw new Error("departure must be after arrival");
+      const bookings = await readBookings();
+      const conflicts = bookings.filter((b) => b.status !== "requested" && arrival < b.departure && departure > b.arrival);
+      return {
+        available: conflicts.length === 0,
+        arrival,
+        departure,
+        conflicts: conflicts.map((b) => ({ arrival: b.arrival, departure: b.departure, status: normalizedStatus(b.status) })),
+      };
+    },
+  },
+  search_availability: {
+    name: "search_availability",
+    description: "Search for available booking windows starting from a given date.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "Start date to search from in YYYY-MM-DD format" },
+        minNights: { type: "number", description: "Minimum number of nights (default 10)", default: 10 },
+        maxResults: { type: "number", description: "Maximum windows to return (default 5)", default: 5 },
+      },
+      required: ["from"],
+    },
+    handler: async (args) => {
+      const from = String(args.from ?? new Date().toISOString().slice(0, 10));
+      const minNights = Math.max(1, Number(args.minNights) || 10);
+      const maxResults = Math.max(1, Number(args.maxResults) || 5);
+      const bookings = await readBookings();
+      const unavailable = bookings.filter((b) => b.status !== "requested");
+      const results: Array<{ arrival: string; departure: string; nights: number }> = [];
+      const searchStart = new Date(`${from}T00:00:00Z`);
+      const maxSearch = new Date(searchStart);
+      maxSearch.setUTCDate(maxSearch.getUTCDate() + 365);
+
+      let cursor = new Date(searchStart);
+      while (cursor < maxSearch && results.length < maxResults) {
+        let found = false;
+        for (let offset = 0; offset < 365 && !found; offset += 1) {
+          const testStart = new Date(cursor);
+          testStart.setUTCDate(testStart.getUTCDate() + offset);
+          if (testStart >= maxSearch) break;
+          const testEnd = new Date(testStart);
+          testEnd.setUTCDate(testEnd.getUTCDate() + minNights);
+          if (testEnd > maxSearch) break;
+          const startKey = testStart.toISOString().slice(0, 10);
+          const endKey = testEnd.toISOString().slice(0, 10);
+          const blocked = unavailable.some((b) => startKey < b.departure && endKey > b.arrival);
+          if (!blocked) {
+            results.push({ arrival: startKey, departure: endKey, nights: minNights });
+            cursor = new Date(testEnd);
+            found = true;
+          }
+        }
+        if (!found) break;
+      }
+      return { from, minNights, windows: results };
+    },
+  },
+  get_pricing: {
+    name: "get_pricing",
+    description: "Get current seasonal pricing per night and fee information.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+    handler: async () => {
+      const pricing = await readPricing();
+      return {
+        currency: "EUR",
+        lowSeason: { nightlyRate: pricing.lowSeason, months: "November–March" },
+        midSeason: { nightlyRate: pricing.midSeason, months: "April–June, October" },
+        highSeason: { nightlyRate: pricing.highSeason, months: "July–September" },
+        cleaningFee,
+        laundryFeePerGuest,
+        minimumStayNights,
+      };
+    },
+  },
+  estimate_price: {
+    name: "estimate_price",
+    description: "Calculate an estimated total price for a stay including fees.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        arrival: { type: "string", description: "Check-in date in YYYY-MM-DD format" },
+        departure: { type: "string", description: "Check-out date in YYYY-MM-DD format" },
+        guests: { type: "number", description: "Number of guests 1-4 (default 2)", default: 2 },
+      },
+      required: ["arrival", "departure"],
+    },
+    handler: async (args) => {
+      const arrival = String(args.arrival ?? "");
+      const departure = String(args.departure ?? "");
+      const guests = Math.max(1, Math.min(4, Number(args.guests) || 2));
+      if (!arrival || !departure) throw new Error("arrival and departure are required");
+      const pricing = await readPricing();
+      const start = new Date(`${arrival}T00:00:00Z`);
+      const end = new Date(`${departure}T00:00:00Z`);
+      let nights = 0;
+      let accommodation = 0;
+      for (const date = new Date(start); date < end; date.setUTCDate(date.getUTCDate() + 1)) {
+        nights += 1;
+        accommodation += nightlyRate(date, pricing);
+      }
+      const laundry = guests * laundryFeePerGuest;
+      return {
+        arrival, departure, nights, guests,
+        accommodation, cleaningFee, laundry,
+        total: accommodation + cleaningFee + laundry,
+        currency: "EUR",
+        note: "Estimate only. No payment required for booking inquiries.",
+      };
+    },
+  },
+  submit_booking_request: {
+    name: "submit_booking_request",
+    description: "Submit a booking inquiry for the Casa.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        arrival: { type: "string", description: "Check-in date in YYYY-MM-DD format" },
+        departure: { type: "string", description: "Check-out date in YYYY-MM-DD format" },
+        name: { type: "string", description: "Full name of the guest" },
+        email: { type: "string", description: "Email address of the guest" },
+        guests: { type: "number", description: "Number of guests 1-4 (default 2)", default: 2 },
+        message: { type: "string", description: "Optional message or special requests" },
+      },
+      required: ["arrival", "departure", "name", "email"],
+    },
+    handler: async (args) => {
+      const arrival = String(args.arrival ?? "");
+      const departure = String(args.departure ?? "");
+      const name = String(args.name ?? "");
+      const email = String(args.email ?? "");
+      const guests = Number(args.guests ?? 2);
+      const message = String(args.message ?? "");
+      if (!arrival || !departure || !name || !email) throw new Error("arrival, departure, name, and email are required");
+      const fields = bookingFields({ arrival, departure, name, email, guests, message, status: "requested" });
+      if (!fields) throw new Error("Invalid booking data. Check dates, name, email, and guest count.");
+      const bookings = await readBookings();
+      if (overlapsBooking(bookings, fields)) throw new Error("The selected date range is no longer available.");
+      const booking: Booking = { id: randomUUID(), ...fields, createdAt: new Date().toISOString() };
+      await saveBookings([...bookings, booking]);
+      return {
+        success: true, bookingId: booking.id,
+        message: "Your booking request has been received. You will be contacted within 24 hours.",
+        arrival: booking.arrival, departure: booking.departure,
+      };
+    },
+  },
+};
+
+app.use("/mcp", createMcpRouter(mcpTools));
 
 if (webDirectory) {
   app.use(express.static(webDirectory, { index: "index.html", maxAge: "1h" }));
