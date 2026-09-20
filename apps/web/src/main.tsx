@@ -22,6 +22,7 @@ import schlafzimmerImage from "./assets/Schlafzimmer.jpg";
 import terrasseImage from "./assets/Terassse.jpg";
 import wohnenKuecheImage from "./assets/Wohnen_Kueche.jpg";
 import "./styles.css";
+import { initWebMcpBridge } from "./webmcp";
 
 const links = ["Home", "La Casa", "Galerie", "Lage & Infos", "Preise & Kalender"];
 const menuTargets = ["home", "casa", "galerie", "lage", "preise"] as const;
@@ -1026,5 +1027,7 @@ function App() {
     </>
   );
 }
+
+initWebMcpBridge();
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
