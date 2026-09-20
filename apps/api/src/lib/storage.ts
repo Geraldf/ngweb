@@ -26,3 +26,32 @@ export async function writeJSON(path: string, data: unknown) {
 export async function ensureDir(directory: string) {
   await mkdir(directory, { recursive: true });
 }
+
+// --- Concurrency lock ---
+// Single-process mutex to serialize read-modify-write on JSON files.
+// Prevents lost writes when concurrent requests interleave read-modify-write.
+
+type Release = () => void;
+
+const lockQueues = new Map<string, Promise<void>>();
+
+export async function withLock<T>(path: string, fn: () => Promise<T>): Promise<T> {
+  const prev = lockQueues.get(path) ?? Promise.resolve();
+
+  let release: Release;
+  const next = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  lockQueues.set(path, next);
+
+  await prev;
+
+  try {
+    return await fn();
+  } finally {
+    release!();
+    if (lockQueues.get(path) === next) {
+      lockQueues.delete(path);
+    }
+  }
+}

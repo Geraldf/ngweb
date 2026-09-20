@@ -1,26 +1,12 @@
 import { Router } from "express";
 import { randomUUID } from "node:crypto";
-import { readJSON, writeJSON } from "../lib/storage.js";
+import { readJSON, writeJSON, withLock } from "../lib/storage.js";
 import type { Booking, BookingFields } from "../types.js";
 
 const MINIMUM_STAY_NIGHTS = 10;
 
-const bookingStore = new Map<string, Booking[]>();
-
-function getStore(key: string): Booking[] {
-  return bookingStore.get(key) ?? [];
-}
-
 export function createBookingRouter(dataFile: string): Router {
   const router = Router();
-
-  async function readBookings(): Promise<Booking[]> {
-    return readJSON<Booking[]>(dataFile, []);
-  }
-
-  async function saveBookings(bookings: Booking[]) {
-    await writeJSON(dataFile, bookings);
-  }
 
   function overlapsBooking(bookings: Booking[], fields: BookingFields, ignoredId?: string) {
     return bookings.some((booking) => booking.id !== ignoredId && booking.status !== "requested" && fields.arrival < booking.departure && fields.departure > booking.arrival);
@@ -54,7 +40,7 @@ export function createBookingRouter(dataFile: string): Router {
 
   router.get("/", async (_request, response, next) => {
     try {
-      const bookings = await readBookings();
+      const bookings = await readJSON<Booking[]>(dataFile, []);
       response.json(bookings.map(({ arrival, departure, status }) => ({
         arrival,
         departure,
@@ -72,17 +58,23 @@ export function createBookingRouter(dataFile: string): Router {
         response.status(400).json({ message: "Bitte prüfen Sie Ihre Reisedaten und Kontaktdaten." });
         return;
       }
-      const bookings = await readBookings();
-      if (overlapsBooking(bookings, fields)) {
+      const booking = await withLock(dataFile, async () => {
+        const bookings = await readJSON<Booking[]>(dataFile, []);
+        if (overlapsBooking(bookings, fields)) {
+          return null;
+        }
+        const newBooking: Booking = {
+          id: randomUUID(),
+          ...fields,
+          createdAt: new Date().toISOString(),
+        };
+        await writeJSON(dataFile, [...bookings, newBooking]);
+        return newBooking;
+      });
+      if (!booking) {
         response.status(409).json({ message: "Dieser Zeitraum ist leider nicht mehr verfügbar." });
         return;
       }
-      const booking: Booking = {
-        id: randomUUID(),
-        ...fields,
-        createdAt: new Date().toISOString(),
-      };
-      await saveBookings([...bookings, booking]);
       response.status(201).json({ id: booking.id, message: "Ihre Buchungsanfrage ist bei uns eingegangen." });
     } catch (error) {
       next(error);
