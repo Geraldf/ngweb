@@ -1,15 +1,14 @@
 import express from "express";
 import { Router } from "express";
-import { randomUUID, timingSafeEqual } from "node:crypto";
-import { mkdtemp, readFile, readdir, rename, rm, access, mkdir, writeFile, unlink } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdtemp, readFile, readdir, rename, rm, access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { readJSON, writeJSON } from "../lib/storage.js";
+import { readJSON, writeJSON, withLock } from "../lib/storage.js";
 import { requireAdmin, MigrationError } from "../middleware/admin.js";
 import type { Booking, BookingFields } from "../types.js";
 
 const DATA_MIGRATION_VERSION = 1;
 const MIGRATION_IMPORT_LIMIT = "500mb";
-const MIGRATION_IMPORT_LIMIT_LABEL = "500 MB";
 
 type MigrationPackage = {
   migrationVersion: number;
@@ -144,13 +143,19 @@ export function createAdminRouter(dataDirectory: string, bookingsFile: string): 
         response.status(400).json({ message: "Bitte prüfen Sie alle Buchungsdaten." });
         return;
       }
-      const bookings = await readJSON<Booking[]>(bookingsFile, []);
-      if (overlapsBooking(bookings, fields)) {
+      const booking = await withLock(bookingsFile, async () => {
+        const bookings = await readJSON<Booking[]>(bookingsFile, []);
+        if (overlapsBooking(bookings, fields)) {
+          return null;
+        }
+        const newBooking: Booking = { id: randomUUID(), ...fields, createdAt: new Date().toISOString() };
+        await writeJSON(bookingsFile, [...bookings, newBooking]);
+        return newBooking;
+      });
+      if (!booking) {
         response.status(409).json({ message: "Der Zeitraum überschneidet sich mit einer bestehenden Buchung." });
         return;
       }
-      const booking: Booking = { id: randomUUID(), ...fields, createdAt: new Date().toISOString() };
-      await writeJSON(bookingsFile, [...bookings, booking]);
       response.status(201).json(booking);
     } catch (error) {
       next(error);
@@ -159,24 +164,36 @@ export function createAdminRouter(dataDirectory: string, bookingsFile: string): 
 
   router.patch("/bookings/:id", requireAdmin, async (request, response, next) => {
     try {
-      const bookings = await readJSON<Booking[]>(bookingsFile, []);
-      const index = bookings.findIndex((booking) => booking.id === request.params.id);
-      if (index === -1) {
+      const updated = await withLock(bookingsFile, async () => {
+        const bookings = await readJSON<Booking[]>(bookingsFile, []);
+        const index = bookings.findIndex((booking) => booking.id === request.params.id);
+        if (index === -1) {
+          return null;
+        }
+        const fields = bookingFields({ ...bookings[index], ...(request.body as Record<string, unknown>) });
+        if (!fields) {
+          return undefined;
+        }
+        if (overlapsBooking(bookings, fields, bookings[index].id)) {
+          return false;
+        }
+        bookings[index] = { ...bookings[index], ...fields };
+        await writeJSON(bookingsFile, bookings);
+        return bookings[index];
+      });
+      if (updated === null) {
         response.status(404).json({ message: "Buchung nicht gefunden." });
         return;
       }
-      const fields = bookingFields({ ...bookings[index], ...(request.body as Record<string, unknown>) });
-      if (!fields) {
+      if (updated === undefined) {
         response.status(400).json({ message: "Bitte prüfen Sie alle Buchungsdaten." });
         return;
       }
-      if (overlapsBooking(bookings, fields, bookings[index].id)) {
+      if (updated === false) {
         response.status(409).json({ message: "Der Zeitraum überschneidet sich mit einer bestehenden Buchung." });
         return;
       }
-      bookings[index] = { ...bookings[index], ...fields };
-      await writeJSON(bookingsFile, bookings);
-      response.json(bookings[index]);
+      response.json(updated);
     } catch (error) {
       next(error);
     }
@@ -184,12 +201,13 @@ export function createAdminRouter(dataDirectory: string, bookingsFile: string): 
 
   router.delete("/bookings/:id", requireAdmin, async (request, response, next) => {
     try {
-      const bookings = await readJSON<Booking[]>(bookingsFile, []);
-      if (!bookings.some((booking) => booking.id === request.params.id)) {
-        response.status(404).json({ message: "Buchung nicht gefunden." });
-        return;
-      }
-      await writeJSON(bookingsFile, bookings.filter((booking) => booking.id !== request.params.id));
+      await withLock(bookingsFile, async () => {
+        const bookings = await readJSON<Booking[]>(bookingsFile, []);
+        if (!bookings.some((booking) => booking.id === request.params.id)) {
+          return;
+        }
+        await writeJSON(bookingsFile, bookings.filter((booking) => booking.id !== request.params.id));
+      });
       response.status(204).end();
     } catch (error) {
       next(error);
