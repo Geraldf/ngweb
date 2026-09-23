@@ -1,4 +1,3 @@
-import express from "express";
 import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { mkdtemp, readFile, readdir, rename, rm, access, mkdir, writeFile } from "node:fs/promises";
@@ -8,7 +7,6 @@ import { requireAdmin, MigrationError } from "../middleware/admin.js";
 import type { Booking, BookingFields } from "../types.js";
 
 const DATA_MIGRATION_VERSION = 1;
-const MIGRATION_IMPORT_LIMIT = "500mb";
 
 type MigrationPackage = {
   migrationVersion: number;
@@ -243,7 +241,6 @@ export function createAdminRouter(dataDirectory: string, bookingsFile: string): 
   router.post(
     "/migration/import",
     requireAdmin,
-    express.raw({ type: "application/json", limit: MIGRATION_IMPORT_LIMIT }),
     async (request, response, next) => {
       let stagingDirectory: string | undefined;
       let backupDirectory: string | undefined;

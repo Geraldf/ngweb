@@ -8,6 +8,7 @@ import { createPricingRouter } from "./routes/pricing.js";
 import { createAdminRouter } from "./routes/admin.js";
 import { createCalendarRouter } from "./routes/calendar.js";
 import { createMcpRouter } from "./mcp.js";
+import { requireAdmin } from "./middleware/admin.js";
 
 dotenv.config({ path: path.resolve(import.meta.dirname, "../../../.env") });
 
@@ -39,7 +40,18 @@ app.use(cors({
   },
 }));
 
+// Migration imports must arrive as raw buffers: the global express.json()
+// below would parse the body first (body-parser skips already-parsed requests),
+// which made every import fail the Buffer.isBuffer check in admin.ts.
+// requireAdmin runs first so unauthenticated requests are rejected before
+// the (potentially large) body is buffered.
+app.use("/api/admin/migration/import", requireAdmin, express.raw({ type: "application/json", limit: MIGRATION_IMPORT_LIMIT }));
+
 app.use(express.json());
+
+// Trust a single proxy hop (cloudflared / Docker port mapping) so request.ip
+// resolves to the real client address for rate limiting.
+app.set("trust proxy", 1);
 app.use("/uploads", express.static(filesDirectory, { fallthrough: false, maxAge: "1d" }));
 
 // Health check
