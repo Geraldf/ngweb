@@ -13,8 +13,7 @@ FROM node:22-alpine AS production
 ENV NODE_ENV=production \
     PORT=3000 \
     MEDIA_DATA_DIR=/app/data/media \
-    WEB_DIST_DIR=/app/apps/web/dist \
-    ADMIN_TOKEN=Lennart21
+    WEB_DIST_DIR=/app/apps/web/dist
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
