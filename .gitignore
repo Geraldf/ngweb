@@ -6,3 +6,4 @@ npm-debug.log*
 data/media/
 apps/api/data/
 pnpm-lock.yaml
+casa-baia-migration.json

@@ -246,8 +246,18 @@ export function createAdminRouter(dataDirectory: string, bookingsFile: string): 
       let backupDirectory: string | undefined;
       let oldDataMoved = false;
       try {
-        if (!Buffer.isBuffer(request.body)) throw new MigrationError("Die Migrationsdatei ist leer oder ungültig.");
-        const migration = validateMigration(JSON.parse(request.body.toString("utf8")) as unknown);
+        let bodyContent: Buffer;
+        if (Buffer.isBuffer(request.body)) {
+          bodyContent = request.body;
+        } else if (typeof request.body === "string") {
+          if (request.body.length === 0) throw new MigrationError("Die Migrationsdatei ist leer oder ungültig.");
+          bodyContent = Buffer.from(request.body, "utf8");
+        } else if (typeof request.body === "object" && request.body !== null) {
+          bodyContent = Buffer.from(JSON.stringify(request.body), "utf8");
+        } else {
+          throw new MigrationError("Die Migrationsdatei ist leer oder ungültig.");
+        }
+        const migration = validateMigration(JSON.parse(bodyContent.toString("utf8")) as unknown);
         const parentDirectory = path.dirname(dataDirectory);
         await mkdir(parentDirectory, { recursive: true });
         stagingDirectory = await mkdtemp(path.join(parentDirectory, ".migration-import-"));
