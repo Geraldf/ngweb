@@ -8,6 +8,7 @@ import { createPricingRouter } from "./routes/pricing.js";
 import { createAdminRouter } from "./routes/admin.js";
 import { createCalendarRouter } from "./routes/calendar.js";
 import { createMcpRouter } from "./mcp.js";
+import { requireAdmin } from "./middleware/admin.js";
 
 dotenv.config({ path: path.resolve(import.meta.dirname, "../../../.env") });
 

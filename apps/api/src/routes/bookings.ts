@@ -1,9 +1,13 @@
 import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { readJSON, writeJSON, withLock } from "../lib/storage.js";
+import { rateLimit } from "../lib/rateLimit.js";
 import type { Booking, BookingFields } from "../types.js";
 
 const MINIMUM_STAY_NIGHTS = 10;
+// Public booking submissions are unauthenticated, so throttle them per client
+// IP to keep the calendar data file free of automated spam.
+const bookingRequestLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10 });
 
 export function createBookingRouter(dataFile: string): Router {
   const router = Router();
@@ -51,7 +55,14 @@ export function createBookingRouter(dataFile: string): Router {
     }
   });
 
-  router.post("/", async (request, response, next) => {
+  router.post("/", (request, response, next) => {
+    if (bookingRequestLimiter(request.ip ?? request.socket.remoteAddress ?? "unknown")) {
+      response.set("Retry-After", "3600");
+      response.status(429).json({ message: "Zu viele Anfragen. Bitte versuchen Sie es später erneut." });
+      return;
+    }
+    next();
+  }, async (request, response, next) => {
     try {
       const fields = bookingFields({ ...(request.body as Record<string, unknown>), status: "requested" });
       if (!fields) {
