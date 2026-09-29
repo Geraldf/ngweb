@@ -2,46 +2,12 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug full stack",
-      "type": "node",
-      "request": "launch",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev"
-      ],
-      "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "autoAttachChildProcesses": true,
-      "sourceMaps": true,
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "serverReadyAction": {
-        "pattern": "Local:\\s+(https?://\\S+)",
-        "uriFormat": "%s",
-        "action": "debugWithChrome",
-        "webRoot": "${workspaceFolder}/apps/web/src"
-      }
-    },
-    {
-      "type": "node",
-      "request": "attach",
-      "name": "Attach to tsx",
-      "port": 9229,
-      "restart": true,
-      "skipFiles": [
-        "<node_internals>/**"
-      ]
-    },
-    {
       "name": "Debug API",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "node",
       "runtimeArgs": [
+        "--inspect=9229",
         "--enable-source-maps",
         "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
         "src/index.ts"
@@ -50,6 +16,18 @@
       "envFile": "${workspaceFolder}/.env",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
+      "restart": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "Attach to API",
+      "type": "node",
+      "request": "attach",
+      "address": "127.0.0.1",
+      "port": 9229,
+      "restart": true,
       "skipFiles": [
         "<node_internals>/**"
       ]
@@ -74,16 +52,6 @@
         "action": "debugWithChrome",
         "webRoot": "${workspaceFolder}/apps/web/src"
       }
-    },
-    {
-      "name": "Attach to API",
-      "type": "node",
-      "request": "attach",
-      "port": 9229,
-      "restart": true,
-      "skipFiles": [
-        "<node_internals>/**"
-      ]
     }
   ]
 }
