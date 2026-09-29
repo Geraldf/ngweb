@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "dev": "concurrently -n api,web -c yellow,cyan \"npm run dev -w @fuchsclan/api\" \"npm run dev -w @fuchsclan/web\"",
-    "dev:debug": "tsx --inspect src/index.ts",
+    "dev:debug": "concurrently -n api,web -c yellow,cyan \"npm run dev:debug -w @fuchsclan/api\" \"npm run dev -w @fuchsclan/web\"",
     "build": "npm run build -w @fuchsclan/api && npm run build -w @fuchsclan/web",
     "typecheck": "npm run typecheck -w @fuchsclan/api && npm run typecheck -w @fuchsclan/web",
     "git:install-hooks": "git config core.hooksPath .githooks",
