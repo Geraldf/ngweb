@@ -307,13 +307,16 @@ function App() {
     setAdminBusy(true);
     setPricingStatus("");
     try {
-      const response = await authenticatedRequest(`${apiBase}/api/admin/pricing`, {
+      const response = await authenticatedRequest(`${apiBase}/api/pricing`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pricingDraft),
       });
-      const result = await response.json() as Pricing | { message?: string };
-      if (!response.ok) throw new Error("message" in result ? result.message : "Preise konnten nicht gespeichert werden.");
+      const isJson = response.headers.get("content-type")?.includes("application/json") ?? false;
+      const result = isJson ? await response.json() as Pricing | { message?: string } : {};
+      if (!response.ok || !isJson) {
+        throw new Error("message" in result && result.message ? result.message : "Preise konnten nicht gespeichert werden.");
+      }
       setPricing(result as Pricing);
       setPricingDraft(result as Pricing);
       setPricingStatus("Saisonpreise wurden gespeichert.");
